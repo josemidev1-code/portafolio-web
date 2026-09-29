@@ -841,6 +841,16 @@
 
                     </div>
 
+                    <!-- FIX: control que el JavaScript esperaba y que faltaba en el HTML -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-medium text-slate-300">Porcentaje estimado del proceso automatizable</label>
+                            <span id="val-automation" class="font-mono text-lg font-bold text-accent-cyan">90%</span>
+                        </div>
+                        <input id="input-automation" type="range" min="0" max="100" step="5" value="90" oninput="updateROICalculator()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-accent-cyan">
+                        <p class="text-[11px] text-slate-500 mt-2">Escenario configurable: no representa una promesa de ahorro real.</p>
+                    </div>
+
 
 
                     <!-- Computed Loss Summary Box -->
@@ -1667,11 +1677,11 @@
 
 
 
-                const year1Saved = annualLoss * 0.9;
+                const year1Saved = annualLoss * automation;
 
-                const year2Saved = year2Loss * 0.9;
+                const year2Saved = year2Loss * automation;
 
-                const year3Saved = year3Loss * 0.9;
+                const year3Saved = year3Loss * automation;
 
 
 
@@ -2006,6 +2016,7 @@
         window.addEventListener('DOMContentLoaded', () => {
 
             initROIChart();
+            updateROICalculator();
 
         });
 
