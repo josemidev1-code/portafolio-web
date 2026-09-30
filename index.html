@@ -1741,6 +1741,14 @@
 
             const logBox = document.getElementById('sim-log-output');
 
+            if (btn.disabled) return;
+            for (let paso = 1; paso <= 5; paso++) {
+                document.getElementById(`step-${paso}`).className = 'p-4 rounded-2xl bg-surface-dark border border-white/10 text-center transition-all';
+                const estado = document.getElementById(`step-${paso}-status`);
+                estado.textContent = 'En espera';
+                estado.className = 'mt-2 text-[10px] font-mono text-slate-500';
+            }
+
 
 
             btn.disabled = true;
@@ -1881,7 +1889,8 @@
                 <div class="space-y-2">
                     <div class="text-accent-cyan font-bold">GitHub // josemidev1-code</div>
                     <div><a class="underline hover:text-white" href="https://github.com/josemidev1-code" target="_blank" rel="noopener noreferrer">Abrir perfil ↗</a></div>
-                    <div><a class="underline hover:text-white" href="https://github.com/josemidev1-code/mi-web" target="_blank" rel="noopener noreferrer">Repositorio mi-web ↗</a></div>
+                    <div><a class="underline hover:text-white" href="https://github.com/josemidev1-code/portafolio-web" target="_blank" rel="noopener noreferrer">Código del portfolio ↗</a></div>
+                    <div><a class="underline hover:text-white" href="https://josemidev1-code.github.io/JOSEMI-OS/" target="_blank" rel="noopener noreferrer">Abrir JOSEMI-OS ↗</a></div>
                 </div>`;
         }
 
@@ -1908,6 +1917,10 @@
 
 
                 switch(cmd) {
+
+                    case 'gh':
+                        response = cmdRepos();
+                        break;
 
                     case 'help':
 
