@@ -1775,7 +1775,10 @@
 
                 activateStep(1, '✓ Webhook POST 200', 'border-accent-cyan');
 
-                logBox.innerHTML += `<div class="text-accent-cyan">&gt; [Paso 1] Payload recibido correctamente: "${inputVal.substring(0, 35)}..."</div>`;
+                const entrada = document.createElement('div');
+                entrada.className = 'text-accent-cyan';
+                entrada.textContent = `> [Paso 1] Payload recibido correctamente: "${inputVal.substring(0, 35)}..."`;
+                logBox.append(entrada);
 
             }, 400);
 
@@ -1961,23 +1964,23 @@
 
                     default:
 
-                        response = `<div class="text-rose-400">Comando no reconocido: "${cmd}". Escriba "help" para ver opciones.</div>`;
+                        response = '<div class="text-rose-400">Comando no reconocido. Escriba "help" para ver opciones.</div>';
 
                 }
 
 
 
-                outputEl.innerHTML += `
-
-                    <div class="mt-2">
-
-                        <span class="text-accent-cyan font-bold">&gt; ${cmd}</span>
-
-                        <div class="mt-1">${response}</div>
-
-                    </div>
-
-                `;
+                const linea = document.createElement('div');
+                linea.className = 'mt-2';
+                const comando = document.createElement('span');
+                comando.className = 'text-accent-cyan font-bold';
+                comando.textContent = `> ${cmd}`;
+                const respuesta = document.createElement('div');
+                respuesta.className = 'mt-1';
+                // Solo las respuestas constantes del programa contienen HTML.
+                respuesta.innerHTML = response;
+                linea.append(comando, respuesta);
+                outputEl.append(linea);
 
 
 
