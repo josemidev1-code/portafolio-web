@@ -1,586 +1,139 @@
-(function(){
-  const form = document.getElementById('contact-form');
-  const btn = document.getElementById('cf-btn');
-  const status = document.getElementById('cf-status');
-  if (!form || !btn || !status) return;
+'use strict';
 
-  const rules = [
-    ['cf-nombre','err-nombre', v => v.trim().length >= 2, 'Dime tu nombre (mín. 2 letras).'],
-    ['cf-email','err-email', v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Ese email no parece válido.'],
-    ['cf-mensaje','err-mensaje', v => v.trim().length >= 20, 'Cuéntame un poco más (mín. 20 caracteres).']
-  ];
+// Inicializaciones independientes: las demos no dependen de servicios externos.
+(() => {
+  const menu = document.getElementById('mobile-menu');
+  const button = document.getElementById('mobile-menu-btn');
+  const close = () => { menu.classList.remove('open'); button.setAttribute('aria-expanded', 'false'); };
+  button.addEventListener('click', () => { const open = menu.classList.toggle('open'); button.setAttribute('aria-expanded', String(open)); });
+  menu.addEventListener('click', event => { if (event.target.closest('a')) close(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && menu.classList.contains('open')) { close(); button.focus(); } });
+  window.matchMedia('(min-width:701px)').addEventListener('change', close);
+  function openAnchor() { const target = document.getElementById(location.hash.slice(1)); if (target?.tagName === 'DETAILS') target.open = true; }
+  window.addEventListener('hashchange', openAnchor);
+  openAnchor();
+})();
 
-  function validate(){
-    let ok = true;
-    rules.forEach(([id, errId, test, msg]) => {
-      const el = document.getElementById(id);
-      const error = document.getElementById(errId);
-      const valid = test(el.value);
-      el.setAttribute('aria-invalid', String(!valid));
-      error.classList.toggle('hidden', valid);
-      error.textContent = valid ? '' : msg;
-      if (!valid) ok = false;
-    });
-    return ok;
+function installFilters(attribute, cardSelector, emptyId) {
+  const buttons = [...document.querySelectorAll(`[${attribute}]`)];
+  const cards = [...document.querySelectorAll(cardSelector)];
+  buttons.forEach(button => button.addEventListener('click', () => {
+    const category = button.getAttribute(attribute);
+    buttons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    cards.forEach(card => { card.hidden = category !== 'all' && card.dataset.category !== category; });
+    const empty = emptyId ? document.getElementById(emptyId) : null;
+    if (empty) empty.hidden = cards.some(card => !card.hidden);
+  }));
+}
+installFilters('data-case', '.project-card', 'case-empty');
+installFilters('data-tech', '.tech-card');
+
+(() => {
+  const money = value => new Intl.NumberFormat('es-ES', {style:'currency', currency:'EUR', maximumFractionDigits:0}).format(value);
+  const svg = document.getElementById('roiChart');
+  const body = document.getElementById('roi-table-body');
+  const ns = 'http://www.w3.org/2000/svg';
+  const group = document.createElementNS(ns, 'g');
+  group.setAttribute('aria-hidden', 'true'); svg.append(group);
+  function shape(tag, attrs, text) {
+    const element = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, String(value)));
+    if (text) element.textContent = text;
+    group.append(element);
   }
-
-  rules.forEach(([id]) => document.getElementById(id).addEventListener('blur', validate));
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (form.elements.botcheck && form.elements.botcheck.value) return;
-    if (!validate()) {
-      status.textContent = 'Revisa los campos marcados.';
-      status.className = 'text-sm text-center text-red-400';
-      return;
+  function update() {
+    const people = Number(document.getElementById('input-employees').value);
+    const hours = Number(document.getElementById('input-hours').value);
+    const rate = Number(document.getElementById('input-rate').value);
+    const fraction = Number(document.getElementById('input-automation').value) / 100;
+    document.getElementById('val-employees').textContent = people;
+    document.getElementById('val-hours').textContent = `${hours} h`;
+    document.getElementById('val-rate').textContent = money(rate);
+    document.getElementById('val-automation').textContent = `${Math.round(fraction * 100)} %`;
+    const annual = people * hours * rate * 52;
+    document.getElementById('annual-loss-display').textContent = money(annual);
+    group.replaceChildren(); body.replaceChildren();
+    shape('line', {x1:20,y1:205,x2:410,y2:205,stroke:'#526055'});
+    for (let year = 1; year <= 3; year++) {
+      const cost = annual * year, saved = cost * fraction, x = 40 + (year - 1) * 130, height = year / 3 * 170;
+      shape('rect', {x,y:205-height,width:38,height,rx:3,fill:'#a8c8fb'});
+      shape('rect', {x:x+44,y:205-height*fraction,width:38,height:height*fraction,rx:3,fill:'#d5f478'});
+      shape('text', {x:x+40,y:229,'text-anchor':'middle',fill:'#aab5ad','font-size':12}, `Año ${year}`);
+      const tr = document.createElement('tr');
+      [year, money(cost), money(saved)].forEach(value => {const td=document.createElement('td');td.textContent=value;tr.append(td);});
+      body.append(tr);
     }
+  }
+  document.querySelectorAll('.range-controls input').forEach(input => input.addEventListener('input', update));
+  update();
+})();
 
-    btn.disabled = true;
-    btn.textContent = 'Enviando…';
-    status.textContent = '';
-
+(() => {
+  const button = document.getElementById('btn-run-sim'), output = document.getElementById('sim-log-output');
+  button.addEventListener('click', async () => {
+    if (button.disabled) return;
+    const input = document.getElementById('sim-input-text').value.trim();
+    if (!input) { output.textContent = 'Escribe una solicitud para simular el flujo.'; return; }
+    button.disabled = true; button.textContent = 'Simulando…'; output.replaceChildren();
+    for (let step = 1; step <= 5; step++) {
+      document.getElementById(`step-${step}`).classList.remove('complete');
+      document.getElementById(`step-${step}-status`).textContent = 'En espera';
+    }
+    const messages = [`Entrada de ejemplo: «${input.slice(0, 120)}».`, 'Preparación simulada: el texto se muestra de forma segura.', 'Clasificación de ejemplo: consulta sobre automatización. No se ha consultado una IA.', 'Enrutado simulado: revisión del proyecto.', 'Simulación completada. No se ha enviado ningún mensaje real.'];
     try {
-      const response = await fetch(form.action, { method: 'POST', body: new FormData(form) });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.message || 'No se pudo enviar');
-      status.textContent = '✔ Mensaje enviado correctamente. Te responderé lo antes posible.';
-      status.className = 'text-sm text-center text-emerald-400';
-      form.reset();
-    } catch (error) {
-      status.textContent = '✖ No se ha podido enviar. Puedes escribirme directamente al correo indicado en la web.';
-      status.className = 'text-sm text-center text-red-400';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Enviar solicitud';
-    }
+      for (let step=1; step<=5; step++) {
+        await new Promise(resolve => setTimeout(resolve, 450));
+        document.getElementById(`step-${step}`).classList.add('complete');
+        document.getElementById(`step-${step}-status`).textContent = '✓ Simulado';
+        const line = document.createElement('p'); line.textContent = `${step}. ${messages[step-1]}`; output.append(line);
+        output.scrollTop = output.scrollHeight;
+      }
+    } finally { button.disabled = false; button.textContent = 'Ejecutar simulación'; }
   });
 })();
 
-// --- 1. ROI Chart.js Initialization & Logic ---
-
-        let roiChartInstance = null;
-
-
-
-        function initROIChart() {
-
-            const ctx = document.getElementById('roiChart').getContext('2d');
-
-            roiChartInstance = new Chart(ctx, {
-
-                type: 'bar',
-
-                data: {
-
-                    labels: ['Año 1', 'Año 2', 'Año 3'],
-
-                    datasets: [
-
-                        {
-
-                            label: 'Sin Automatización (Pérdida Acumulada €)',
-
-                            data: [52000, 104000, 156000],
-
-                            backgroundColor: 'rgba(248, 113, 113, 0.7)',
-
-                            borderColor: 'rgba(248, 113, 113, 1)',
-
-                            borderWidth: 1,
-
-                            borderRadius: 6
-
-                        },
-
-                        {
-
-                            label: 'Con Automatización (Capital Conservado €)',
-
-                            data: [46800, 93600, 140400],
-
-                            backgroundColor: 'rgba(34, 211, 238, 0.7)',
-
-                            borderColor: 'rgba(34, 211, 238, 1)',
-
-                            borderWidth: 1,
-
-                            borderRadius: 6
-
-                        }
-
-                    ]
-
-                },
-
-                options: {
-
-                    responsive: true,
-
-                    maintainAspectRatio: false,
-
-                    plugins: {
-
-                        legend: {
-
-                            display: false
-
-                        },
-
-                        tooltip: {
-
-                            callbacks: {
-
-                                label: function(context) {
-
-                                    let label = context.dataset.label || '';
-
-                                    if (label) {
-
-                                        label += ': ';
-
-                                    }
-
-                                    if (context.parsed.y !== null) {
-
-                                        label += new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(context.parsed.y);
-
-                                    }
-
-                                    return label;
-
-                                }
-
-                            }
-
-                        }
-
-                    },
-
-                    scales: {
-
-                        x: {
-
-                            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } },
-
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
-
-                        },
-
-                        y: {
-
-                            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } },
-
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
-
-                        }
-
-                    }
-
-                }
-
-            });
-
-        }
-
-
-
-        function updateROICalculator() {
-
-            const employees = parseInt(document.getElementById('input-employees').value);
-
-            const hours = parseInt(document.getElementById('input-hours').value);
-
-            const rate = parseInt(document.getElementById('input-rate').value);
-            const automation = parseInt(document.getElementById('input-automation').value) / 100;
-
-
-
-            document.getElementById('val-employees').innerText = employees;
-
-            document.getElementById('val-hours').innerText = hours + ' h';
-
-            document.getElementById('val-rate').innerText = rate + ' €';
-            document.getElementById('val-automation').innerText = Math.round(automation * 100) + '%';
-
-
-
-            // Annual loss = employees * hours * rate * 52 weeks
-
-            const annualLoss = employees * hours * rate * 52;
-
-            const formattedLoss = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(annualLoss);
-
-
-
-            document.getElementById('annual-loss-display').innerText = formattedLoss;
-
-
-
-            if (roiChartInstance) {
-
-                const year1Loss = annualLoss;
-
-                const year2Loss = annualLoss * 2;
-
-                const year3Loss = annualLoss * 3;
-
-
-
-                const year1Saved = annualLoss * automation;
-
-                const year2Saved = year2Loss * automation;
-
-                const year3Saved = year3Loss * automation;
-
-
-
-                roiChartInstance.data.datasets[0].data = [year1Loss, year2Loss, year3Loss];
-
-                roiChartInstance.data.datasets[1].data = [year1Saved, year2Saved, year3Saved];
-
-                roiChartInstance.update();
-
-            }
-
-        }
-
-
-
-        // --- 2. Bento Grid Interactive Tab ---
-
-        function switchBentoTab(tab) {
-
-            const btnGym = document.getElementById('btn-tab-gym');
-
-            const btnCode = document.getElementById('btn-tab-code');
-
-            const content = document.getElementById('bento-tab-content');
-
-
-
-            if (tab === 'gym') {
-
-                btnGym.className = "px-3 py-1.5 rounded-lg text-xs font-mono bg-accent-cyan text-surface-dark font-bold";
-
-                btnCode.className = "px-3 py-1.5 rounded-lg text-xs font-mono bg-white/5 text-slate-400 hover:text-white";
-
-                content.innerText = '"Constancia diaria sin excusas. Aceptación del dolor muscular como métrica de progreso real."';
-
-            } else {
-
-                btnCode.className = "px-3 py-1.5 rounded-lg text-xs font-mono bg-accent-cyan text-surface-dark font-bold";
-
-                btnGym.className = "px-3 py-1.5 rounded-lg text-xs font-mono bg-white/5 text-slate-400 hover:text-white";
-
-                content.innerText = '"Refactorización continua. Búsqueda de bugs hasta garantizar un sistema inmune a errores de produccion."';
-
-            }
-
-        }
-
-
-
-        // --- 3. Workflow Simulation Logic ---
-
-        function runWorkflowSimulation() {
-
-            const inputVal = document.getElementById('sim-input-text').value;
-
-            const btn = document.getElementById('btn-run-sim');
-
-            const logBox = document.getElementById('sim-log-output');
-
-            if (btn.disabled) return;
-            for (let paso = 1; paso <= 5; paso++) {
-                document.getElementById(`step-${paso}`).className = 'p-4 rounded-2xl bg-surface-dark border border-white/10 text-center transition-all';
-                const estado = document.getElementById(`step-${paso}-status`);
-                estado.textContent = 'En espera';
-                estado.className = 'mt-2 text-[10px] font-mono text-slate-500';
-            }
-
-
-
-            btn.disabled = true;
-
-            btn.innerText = "⏳ Ejecutando...";
-
-            logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] INICIANDO FLUJO DE AGENTE AGÉNTICO n8n...</div>`;
-
-
-
-            // Helper function to activate steps
-
-            const activateStep = (stepNum, textStatus, colorClass) => {
-
-                const el = document.getElementById(`step-${stepNum}`);
-
-                const statusEl = document.getElementById(`step-${stepNum}-status`);
-
-                el.className = `p-4 rounded-2xl bg-surface-dark border ${colorClass} text-center transition-all scale-105 shadow-lg`;
-
-                statusEl.innerText = textStatus;
-
-                statusEl.className = `mt-2 text-[10px] font-mono font-bold ${colorClass.replace('border-', 'text-')}`;
-
-            };
-
-
-
-            // Step 1: Webhook
-
-            setTimeout(() => {
-
-                activateStep(1, '✓ Webhook POST 200', 'border-accent-cyan');
-
-                const entrada = document.createElement('div');
-                entrada.className = 'text-accent-cyan';
-                entrada.textContent = `> [Paso 1] Payload recibido correctamente: "${inputVal.substring(0, 35)}..."`;
-                logBox.append(entrada);
-
-            }, 400);
-
-
-
-            // Step 2: Python Script
-
-            setTimeout(() => {
-
-                activateStep(2, '✓ Python OK', 'border-emerald-400');
-
-                logBox.innerHTML += `<div class="text-emerald-400">&gt; [Paso 2] Script Python ejecutado. Texto sanitizado, caracteres extraños removidos.</div>`;
-
-            }, 900);
-
-
-
-            // Step 3: LLM AI Agent
-
-            setTimeout(() => {
-
-                activateStep(3, '✓ Clasificado IA', 'border-purple-400');
-
-                logBox.innerHTML += `<div class="text-purple-400">&gt; [Paso 3] Inferencia LLM finalizada. Categoría: "Automatización de Procesos Empresariales". Urgencia: ALTA.</div>`;
-
-            }, 1500);
-
-
-
-            // Step 4: Smart Router
-
-            setTimeout(() => {
-
-                activateStep(4, '✓ Prioridad Alta', 'border-sky-400');
-
-                logBox.innerHTML += `<div class="text-sky-400">&gt; [Paso 4] Enrutador inteligente activado -&gt; Ruta de Respuesta Inmediata B2B.</div>`;
-
-            }, 2000);
-
-
-
-            // Step 5: Multi-Channel Action
-
-            setTimeout(() => {
-
-                activateStep(5, '✓ Alerta Enviada', 'border-emerald-400');
-
-                logBox.innerHTML += `<div class="text-emerald-400 font-bold">&gt; [Paso 5] Notificación enviada a Telegram (+34 621 030 510) y correo jmenterprice73@gmail.com en 2.3s.</div>`;
-
-                btn.disabled = false;
-
-                btn.innerText = "▶ Ejecutar Flujo de IA";
-
-            }, 2600);
-
-        }
-
-
-
-        // --- 4. Tech Stack Filtering ---
-
-        function filterTechStack(category, activeBtn) {
-
-            const cards = document.querySelectorAll('.tech-card');
-
-            const btns = document.querySelectorAll('.tech-filter-btn');
-
-
-
-            btns.forEach(btn => {
-
-                btn.className = "tech-filter-btn px-4 py-2 rounded-xl text-xs font-mono bg-white/5 text-slate-300 hover:text-white border border-white/10";
-
-            });
-
-            if (activeBtn) activeBtn.className = "tech-filter-btn px-4 py-2 rounded-xl text-xs font-mono bg-accent-cyan text-surface-dark font-bold";
-
-
-
-            cards.forEach(card => {
-
-                if (category === 'all' || card.dataset.category === category) {
-
-                    card.style.display = 'block';
-
-                } else {
-
-                    card.style.display = 'none';
-
-                }
-
-            });
-
-        }
-
-
-
-        function cmdRepos() {
-            return `
-                <div class="space-y-2">
-                    <div class="text-accent-cyan font-bold">GitHub // josemidev1-code</div>
-                    <div><a class="underline hover:text-white" href="https://github.com/josemidev1-code" target="_blank" rel="noopener noreferrer">Abrir perfil ↗</a></div>
-                    <div><a class="underline hover:text-white" href="https://github.com/josemidev1-code/portafolio-web" target="_blank" rel="noopener noreferrer">Código del portfolio ↗</a></div>
-                    <div><a class="underline hover:text-white" href="https://josemidev1-code.github.io/JOSEMI-OS/" target="_blank" rel="noopener noreferrer">Abrir JOSEMI-OS ↗</a></div>
-                </div>`;
-        }
-
-        // --- 5. Terminal CLI Handler ---
-
-        function handleCliInput(e) {
-
-            if (e.key === 'Enter') {
-
-                const inputEl = document.getElementById('cli-input');
-
-                const cmd = inputEl.value.trim().toLowerCase();
-
-                const outputEl = document.getElementById('cli-output');
-
-
-
-                if (cmd === '') return;
-
-
-
-                let response = '';
-
-
-
-                switch(cmd) {
-
-                    case 'gh':
-                        response = cmdRepos();
-                        break;
-
-                    case 'help':
-
-                        response = `
-
-                            <div class="text-accent-cyan font-bold">Comandos disponibles:</div>
-
-                            <div>- <span class="text-white">quiensoy</span>: Resumen sobre José Miguel</div>
-
-                            <div>- <span class="text-white">skills</span>: Resumen de habilidades técnicas</div>
-
-                            <div>- <span class="text-white">contacto</span>: Muestra teléfonos y e-mail directos</div>
-
-                            <div>- <span class="text-white">estudios</span>: Información sobre grado DAM</div>
-
-                            <div>- <span class="text-white">gh</span>: Abre mis enlaces de GitHub</div>
-                           <div>- <span class="text-white">clear</span>: Limpia la terminal</div>
-
-                        `;
-
-                        break;
-
-                    case 'quiensoy':
-
-                        response = `<div class="text-slate-200">José Miguel (20 años). Programador full-stack y especialista en IA. Disciplinado (5 días/semana gimnasio), resiliente y enfocado en solucionar problemas de empresa.</div>`;
-
-                        break;
-
-                    case 'skills':
-
-                        response = `<div class="text-slate-200">n8n, Python, Java, React, Next.js, SQL, Tailwind, Linux, Prompt Engineering, Agentes IA autónomos.</div>`;
-
-                        break;
-
-                    case 'contacto':
-
-                        response = `<div class="text-accent-cyan">E-mail: jmenterprice73@gmail.com | Tel: +34 621 030 510 | GitHub: josemidev1-code</div>`;
-
-                        break;
-
-                    case 'estudios':
-
-                        response = `<div class="text-slate-200">Grado Superior en Desarrollo de Aplicaciones Multiplataforma (DAM) - IES Dr. Lluís Simarro.</div>`;
-
-                        break;
-
-                    case 'clear':
-
-                        outputEl.innerHTML = '';
-
-                        inputEl.value = '';
-
-                        return;
-
-                    default:
-
-                        response = '<div class="text-rose-400">Comando no reconocido. Escriba "help" para ver opciones.</div>';
-
-                }
-
-
-
-                const linea = document.createElement('div');
-                linea.className = 'mt-2';
-                const comando = document.createElement('span');
-                comando.className = 'text-accent-cyan font-bold';
-                comando.textContent = `> ${cmd}`;
-                const respuesta = document.createElement('div');
-                respuesta.className = 'mt-1';
-                // Solo las respuestas constantes del programa contienen HTML.
-                respuesta.innerHTML = response;
-                linea.append(comando, respuesta);
-                outputEl.append(linea);
-
-
-
-                inputEl.value = '';
-
-                outputEl.scrollTop = outputEl.scrollHeight;
-
-            }
-
-        }
-
-        function filterCases(category, activeBtn) {
-            document.querySelectorAll('.case-card').forEach(card => {
-                card.style.display = category === 'all' || card.dataset.category === category ? 'block' : 'none';
-            });
-            document.querySelectorAll('.case-filter-btn').forEach(btn => {
-                btn.className = 'case-filter-btn px-4 py-2 rounded-xl text-xs font-mono bg-white/5 text-slate-300 border border-white/10';
-            });
-            if (activeBtn) activeBtn.className = 'case-filter-btn px-4 py-2 rounded-xl text-xs font-mono bg-accent-cyan text-surface-dark font-bold';
-        }
-
-        // --- 7. Mobile Menu Toggle ---
-
-        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-
-            const menu = document.getElementById('mobile-menu');
-
-            menu.classList.toggle('hidden');
-
-        });
-
-
-
-        // Initialize chart on load
-
-        window.addEventListener('DOMContentLoaded', () => {
-
-            initROIChart();
-            updateROICalculator();
-
-        });
+(() => {
+  const input = document.getElementById('cli-input'), output = document.getElementById('cli-output');
+  const answers = {
+    help:'Comandos: help, quiensoy, skills, estudios, contacto, gh, clear.',
+    quiensoy:'Soy José Miguel Miralles Gandia, estudiante de DAM. Aprendo creando proyectos web y explorando la IA y la automatización.',
+    skills:'HTML, CSS y JavaScript en uso; Git y GitHub; IA aplicada. Estoy aprendiendo Java y practicando con Linux y n8n.',
+    estudios:'Desarrollo de Aplicaciones Multiplataforma en el IES Dr. Lluís Simarro.',
+    contacto:'Puedes escribirme a jmenterprice73@gmail.com o usar el formulario de contacto.'
+  };
+  document.getElementById('cli-form').addEventListener('submit', event => {
+    event.preventDefault(); const raw = input.value.trim(), command = raw.toLowerCase(); if (!command) return;
+    input.value = ''; if (command === 'clear') { output.replaceChildren(); return; }
+    const block = document.createElement('div'), prompt = document.createElement('p');
+    prompt.className='accent'; prompt.textContent=`> ${raw}`; block.append(prompt);
+    if (command === 'gh') {
+      [['Mi perfil de GitHub','https://github.com/josemidev1-code'],['Código del portfolio','https://github.com/josemidev1-code/portafolio-web'],['Abrir JOSEMI-OS','https://josemidev1-code.github.io/JOSEMI-OS/']].forEach(([label,url])=>{
+        const line=document.createElement('p'),link=document.createElement('a'); link.href=url;link.textContent=label;link.target='_blank';link.rel='noopener noreferrer';line.append(link);block.append(line);
+      });
+    } else { const reply=document.createElement('p');reply.textContent=answers[command]||'No reconozco ese comando. Escribe help para ver las opciones.';block.append(reply); }
+    output.append(block); while(output.children.length>40) output.firstElementChild.remove(); output.scrollTop=output.scrollHeight;
+  });
+})();
+
+(() => {
+  const gym=document.getElementById('btn-tab-gym'),code=document.getElementById('btn-tab-code');
+  [gym,code].forEach(button=>button.addEventListener('click',()=>{
+    [gym,code].forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+    document.getElementById('bento-tab-content').textContent=button===gym?'La constancia importa más que un día perfecto.':'Pruebo, reviso los errores y vuelvo a intentarlo.';
+  }));
+})();
+
+// Contacto: la respuesta de Web3Forms determina el resultado mostrado.
+(() => {
+  const form=document.getElementById('contact-form'),button=document.getElementById('cf-btn'),status=document.getElementById('cf-status');
+  const rules=[['cf-nombre','err-nombre',value=>value.trim().length>=2,'Escribe al menos dos caracteres.'],['cf-email','err-email',value=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()),'Revisa el formato del correo.'],['cf-mensaje','err-mensaje',value=>value.trim().length>=20,'Cuéntame algo más: al menos 20 caracteres.']];
+  function validate(){let valid=true;for(const[id,errorId,test,message]of rules){const field=document.getElementById(id),error=document.getElementById(errorId),ok=test(field.value);field.setAttribute('aria-invalid',String(!ok));error.hidden=ok;error.textContent=ok?'':message;if(!ok)valid=false;}return valid;}
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();if(button.disabled||form.elements.botcheck.checked)return;
+    if(!validate()){status.textContent='Revisa los campos marcados.';status.className='error';form.querySelector('[aria-invalid="true"]').focus();return;}
+    button.disabled=true;button.textContent='Enviando…';status.textContent='';
+    try{const response=await fetch(form.action,{method:'POST',body:new FormData(form)});const data=await response.json();if(!response.ok||data.success!==true)throw new Error('Envío rechazado');status.textContent='Mensaje aceptado por el servicio de envío. Gracias por escribirme.';status.className='success';form.reset();}
+    catch{status.textContent='No se ha podido confirmar el envío. Puedes escribirme a jmenterprice73@gmail.com.';status.className='error';}
+    finally{button.disabled=false;button.textContent='Enviar mensaje ↗';}
+  });
+})();
