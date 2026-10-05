@@ -1,5 +1,7 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js';
+import * as THREE from 'three';
+import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/environments/RoomEnvironment.js';
 
+import { smoothTravel, smootherStep } from './motion.js';
 import { createGreekMuseum } from './greek-temple.js';
 
 const root = document.documentElement;
@@ -59,14 +61,14 @@ const MAIN = STOPS.map((s, i) => s.pass ? -1 : i).filter(i => i >= 0); // índic
 const segs = []; let total = 0;
 STOPS.forEach((s, i) => {
   if (s.hold) { segs.push({ type: 'hold', i, a: total, b: total + s.hold }); total += s.hold; }
-  if (i < STOPS.length - 1) { const len = STOPS[i + 1].pass || s.pass ? .6 : 1; segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
+  if (i < STOPS.length - 1) { const len = i === 0 ? 3.2 : (STOPS[i + 1].pass || s.pass ? 1.05 : 1.4); segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
 });
 const track = document.getElementById('track');
-const VH_PER_UNIT = small ? 110 : 95;
+const VH_PER_UNIT = small ? 82 : 72;
 track.style.height = `calc(${total * VH_PER_UNIT}vh + 100vh)`;
 
 const curve = new THREE.CatmullRomCurve3(STOPS.map(s => new THREE.Vector3(...s.pos)), false, 'centripetal');
-const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const ease = smootherStep;
 
 function sample(u) {
   // devuelve posición, look e índice de parada actual para u en [0,total]
@@ -84,7 +86,9 @@ function sample(u) {
 // centro de scroll (en unidades) de cada parada real, para navegar
 const stopU = i => { const h = segs.find(s => s.type === 'hold' && s.i === i); return h ? (h.a + h.b) / 2 : 0; };
 const unitPx = () => (track.offsetHeight - innerHeight) / total;
+let directNavigation = false;
 function goTo(stopIndex) {
+  directNavigation = true;
   const top = stopU(stopIndex) * unitPx();
   window.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
 }
@@ -93,19 +97,26 @@ function goTo(stopIndex) {
 const canvas = document.getElementById('scene');
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: !small, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 } catch (e) { root.classList.add('no-webgl', 'ready'); throw e; }
 renderer.setPixelRatio(Math.min(devicePixelRatio, small ? 1.35 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
-renderer.shadowMap.enabled = !small;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#18212b');
 scene.fog = new THREE.Fog('#18212b', 24, 65);
+// Reflejos suaves en bronce, cristal y piedra, sin descargar un HDR pesado.
+const pmrem = new THREE.PMREMGenerator(renderer);
+const reflectionRoom = new RoomEnvironment();
+const reflectionTarget = pmrem.fromScene(reflectionRoom, .025);
+scene.environment = reflectionTarget.texture;
+scene.environmentIntensity = .22;
+reflectionRoom.dispose(); pmrem.dispose();
 const camera = new THREE.PerspectiveCamera(small ? 62 : 50, innerWidth / innerHeight, .1, 80);
 camera.position.set(...STOPS[0].pos);
 
@@ -145,7 +156,7 @@ const plinthMat = new THREE.MeshStandardMaterial({ color: '#e8e2d8', roughness: 
 function addSpot(x, z, color, intensity, target) {
   const spot = new THREE.SpotLight(color, intensity, 14, Math.PI / 9, .55, 1.4);
   spot.position.set(x, 6.8, z + 1.4); spot.target = target; spot.castShadow = !small;
-  spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -.0004; scene.add(spot); scene.add(spot.target);
+  spot.shadow.mapSize.set(1024, 1024); spot.shadow.radius = 2; spot.shadow.blurSamples = 6; spot.shadow.bias = -.0004; scene.add(spot); scene.add(spot.target);
   // cono volumétrico falso
   const coneH = 5.4;
   const cone = new THREE.Mesh(new THREE.ConeGeometry(1.25, coneH, 48, 1, true), new THREE.ShaderMaterial({
@@ -417,10 +428,12 @@ canvas.addEventListener('click', () => { if (hovered && hovered.ficha >= 0) open
 track.addEventListener('click', () => { if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
 
 /* ---------- Bucle ---------- */
-let scrollU = 0, smoothU = 0;
+let scrollU = 0, smoothU = 0, travelVelocity = 0;
 const camPos = new THREE.Vector3(...STOPS[0].pos), camLook = new THREE.Vector3(...STOPS[0].look);
 function readScroll() { const max = track.offsetHeight - innerHeight; scrollU = max > 0 ? scrollY / max * total : 0; }
 addEventListener('scroll', readScroll, { passive: true });
+addEventListener('wheel', () => { directNavigation = false; }, { passive: true });
+addEventListener('touchstart', () => { directNavigation = false; }, { passive: true });
 readScroll(); smoothU = scrollU;
 
 let lastAt = -1;
@@ -461,13 +474,13 @@ function loop() {
   const damp = reduce ? 1 : 1 - Math.pow(.0009, dt);
   smoothU += (scrollU - smoothU) * damp;
   const s = sample(smoothU);
-  camPos.lerp(s.pos, reduce ? 1 : 1 - Math.pow(.01, dt));
-  camLook.lerp(s.look, reduce ? 1 : 1 - Math.pow(.01, dt));
+  camPos.copy(s.pos);
+  camLook.lerp(s.look, reduce ? 1 : 1 - Math.exp(-5 * dt));
   mouse.lerp(mouseTarget, 1 - Math.pow(.02, dt));
   const par = reduce ? 0 : 1;
-  camera.position.set(camPos.x + mouse.x * .25 * par, camPos.y + mouse.y * .12 * par + Math.sin(t * .9) * .015 * par, camPos.z);
+  camera.position.set(camPos.x + mouse.x * .10 * par, camPos.y + mouse.y * .05 * par + Math.sin(t * .9) * .005 * par, camPos.z);
   architecture.update(camera, dt, reduce);
-  camera.lookAt(camLook.x + mouse.x * .6 * par, camLook.y + mouse.y * .3 * par, camLook.z);
+  camera.lookAt(camLook.x + mouse.x * .2 * par, camLook.y + mouse.y * .12 * par, camLook.z);
 
   urns.forEach((u, i) => {
     const d = u.inner.userData;

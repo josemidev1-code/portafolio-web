@@ -7,7 +7,8 @@ Un museo digital de inspiración griega para explorar proyectos web y aplicacion
 - **HTML** (`index.html`): contenido, navegación, fichas de proyectos y contacto.
 - **CSS** (`museum.css`): tipografía, composición, paneles, transiciones y adaptación a móvil.
 - **JavaScript y Three.js** (`museum.js`): escena 3D, cámara, recorrido e interacción. Three.js dibuja la escena utilizando WebGL.
-- **Arquitectura** (`greek-temple.js`): columnas acanaladas, frontón, mármol generado, lucernarios, iluminación y puertas articuladas.
+- **Arquitectura** (`greek-temple.js`): columnas con éntasis y capiteles, grecas, frontón, mármol, marcos biselados y puertas con rosetas de bronce.
+- **Movimiento** (`motion.js`): amortiguación del avance y curvas de aceleración, independientes de la tasa de fotogramas.
 
 Three.js 0.169.0 se carga desde jsDelivr y las tipografías desde Google Fonts. Se necesita conexión a Internet para estas dependencias; las geometrías y texturas del edificio se generan en la página.
 
@@ -26,7 +27,8 @@ Abre `http://localhost:8000`. Usa un servidor HTTP para cargar los módulos de J
 - Entrada exterior con pórtico dórico y detalles de bronce.
 - Puertas que se abren al acercarse y se cierran al retroceder.
 - Tres salas con urnas, proyectos y fichas ampliadas.
-- Cámara suavizada, luz cálida, sombras en ordenador y partículas ambientales.
+- Recorrido de entrada más largo, aceleración y frenado progresivos, e inversión del gesto sin saltos.
+- Luz cálida, sombras suavizadas también en móvil, sombras de contacto y reflejos de entorno en los materiales.
 - Navegación por rueda, deslizamiento nativo, botones del plano y teclado.
 - Encuadre vertical específico y menor resolución gráfica en móvil.
 - Respeto de la preferencia de movimiento reducido, pausa al ocultar la pestaña y catálogo alternativo cuando WebGL o la carga de la escena fallan.
@@ -40,6 +42,7 @@ La dirección de diseño toma como referencia los recorridos inmersivos de CSS D
 ```bash
 node --check museum.js
 node --check greek-temple.js
+npm test
 git diff --check
 ```
 
