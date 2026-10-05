@@ -1,52 +1,27 @@
-# Portfolio de José Miguel Miralles Gandia
+# Museo Josemi — Portafolio de José Miguel Miralles Gandia
 
-Portfolio web estático orientado a mostrar proyectos, automatizaciones, habilidades y evolución técnica.
+Portafolio web presentado como un museo virtual con un recorrido 3D que avanza con la rueda del ratón.
 
-## Stack
+## Tecnologías
 
-- HTML5
-- Tailwind CSS vía CDN
-- JavaScript vanilla
-- Chart.js
-- Web3Forms para el formulario de contacto
+- HTML, CSS y JavaScript incluidos en `index.html`.
+- Three.js 0.169.0 cargado desde jsDelivr.
+- Tipografías de Google Fonts.
 
 ## Ejecutar en local
 
-Puedes abrir `index.html` directamente o servir la carpeta con un servidor local:
+Sirve la carpeta con un servidor local:
 
 ```bash
 python -m http.server 8000
 ```
 
-Después abre `http://localhost:8000`.
+Abre `http://localhost:8000`. La escena 3D y las fuentes requieren conexión a Internet para cargar sus dependencias externas.
 
-## Estructura
+## Contenido
 
-```text
-.
-├── index.html
-├── favicon.svg
-├── README.md
-└── docs/
-    └── adr/
-        ├── 0001-arquitectura-web-estatica.md
-        └── 0002-formulario-web3forms.md
-```
+- Recorrido por las salas y los proyectos del museo.
+- Presentación de JOSEMI-OS y enlaces a GitHub.
+- Contacto por correo electrónico y LinkedIn.
 
-## Funciones destacadas
-
-- Calculadora de coste operativo con escenario configurable.
-- Simulador visual de pipeline de automatización.
-- Casos/proyectos con filtros.
-- Matriz tecnológica sin porcentajes de dominio inventados.
-- Terminal interactiva con comando `gh`.
-- Formulario real con validación y Web3Forms.
-- Metaetiquetas, favicon y JSON-LD.
-
-## Contacto y seguridad
-
-La clave pública de Web3Forms vive en el cliente porque el formulario es estático. No guardes contraseñas, tokens privados ni claves de APIs sensibles en este repositorio.
-
-## Nota sobre métricas
-
-Las cifras de ahorro deben publicarse solo después de medir un proceso real. La calculadora de ROI genera escenarios orientativos y no constituye una garantía.
+La página principal contiene los estilos y la lógica de esta versión. Los archivos `style.css`, `script.js` y los documentos de decisiones anteriores se conservan como referencia de la versión previa.
