@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/exam
 import { smoothTravel, routeParameter } from './motion.js';
 import { createMotionRenderer } from './cinematic.js';
 import { addMythology } from './mythology.js';
+import { createFreeCamera } from './free-camera.js';
 import { createGreekMuseum } from './greek-temple.js';
 
 const root = document.documentElement;
@@ -98,6 +99,7 @@ const stopU = i => { const h = segs.find(s => s.type === 'hold' && s.i === i); r
 const unitPx = () => (track.offsetHeight - innerHeight) / total;
 let directNavigation = false;
 function goTo(stopIndex) {
+  freeCamera.exit();
   directNavigation = true;
   const top = stopU(stopIndex) * unitPx();
   window.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
@@ -367,6 +369,12 @@ document.querySelectorAll('[data-goto]').forEach(el => el.addEventListener('clic
 
 // ficha
 const dlg = document.getElementById('ficha');
+const freeCamera=createFreeCamera(THREE,camera,canvas,{
+  button:document.getElementById('free-toggle'),hud:document.getElementById('free-hud'),dialog:dlg,
+  onReset:()=>cinematic.reset(),
+  onExit:()=>{let best=0,distance=Infinity;for(let n=0;n<=200;n++){const u=n/200*total,d=sample(u).pos.distanceTo(camera.position);if(d<distance){distance=d;best=u;}}
+    scrollU=smoothU=best;travelVelocity=0;window.scrollTo({top:best*unitPx(),behavior:'instant'});}
+});
 function openFicha(i) {
   const f = FICHAS[i]; if (!f) return;
   dlg.style.setProperty('--accent', f.accent);
@@ -392,7 +400,7 @@ document.getElementById('copy').addEventListener('click', async e => {
 // teclado: flechas y avance de página saltan de parada en parada
 let currentMain = 0;
 addEventListener('keydown', e => {
-  if (dlg.open || e.target.closest('input,textarea')) return;
+  if (freeCamera.active || dlg.open || e.target.closest('input,textarea')) return;
   const next = { ArrowDown: 1, PageDown: 1, ArrowRight: 1, ArrowUp: -1, PageUp: -1, ArrowLeft: -1 }[e.key];
   if (!next) return; e.preventDefault();
   const n = Math.min(Math.max(currentMain + next, 0), MAIN.length - 1); goTo(MAIN[n]);
@@ -412,7 +420,7 @@ addEventListener('pointermove', e => {
   cursor.style.opacity = '1';
   cursor.style.borderColor = overUI ? 'var(--brass)' : '';
 }, { passive: true });
-canvas.addEventListener('click', () => { if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
+canvas.addEventListener('click', () => { if (freeCamera.consumeClick()) return; if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
 // los clics caen sobre la pista de scroll (encima del canvas): reenviar
 track.addEventListener('click', () => { if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
 
@@ -466,13 +474,15 @@ function loop() {
     smoothU=travel.value;travelVelocity=travel.velocity;
   }
   const s = sample(smoothU);
-  camPos.copy(s.pos);
-  camLook.lerp(s.look, reduce ? 1 : 1 - Math.exp(-5 * dt));
-  mouse.lerp(mouseTarget, 1 - Math.pow(.02, dt));
   const par = reduce ? 0 : 1;
-  camera.position.set(camPos.x + mouse.x * .10 * par, camPos.y + mouse.y * .05 * par + Math.sin(t * .9) * .005 * par, camPos.z);
-  architecture.update(camera, dt, reduce);
-  camera.lookAt(camLook.x + mouse.x * .2 * par, camLook.y + mouse.y * .12 * par, camLook.z);
+  if(freeCamera.active) freeCamera.update(dt);
+  else {
+    camPos.copy(s.pos);camLook.lerp(s.look,reduce?1:1-Math.exp(-5*dt));mouse.lerp(mouseTarget,1-Math.pow(.02,dt));
+    camera.position.set(camPos.x+mouse.x*.10*par,camPos.y+mouse.y*.05*par+Math.sin(t*.9)*.005*par,camPos.z);
+    camera.lookAt(camLook.x+mouse.x*.2*par,camLook.y+mouse.y*.12*par,camLook.z);
+    canvas.dataset.cameraMode='recorrido';
+  }
+  architecture.update(camera,dt,reduce);
 
   urns.forEach((u, i) => {
     const d = u.inner.userData;
@@ -499,7 +509,12 @@ function loop() {
   cx += (tx - cx) * (1 - Math.pow(.0001, dt)); cy += (ty - cy) * (1 - Math.pow(.0001, dt));
   cursor.style.transform = `translate3d(${cx}px,${cy}px,0)`;
 
-  updateUI(s);
+  if(freeCamera.active){
+    let nearest=MAIN[0],distance=Infinity;MAIN.forEach(i=>{const d=camera.position.distanceTo(new THREE.Vector3(...STOPS[i].pos));if(d<distance){distance=d;nearest=i;}});
+    const prior=smoothU;smoothU=stopU(nearest);updateUI(s);smoothU=prior;
+    entrance.style.visibility='hidden';document.querySelector('.museum-caption').style.opacity='0';roomTitle.classList.remove('on');
+    Object.entries(cards).forEach(([i,el])=>{const visible=+i===nearest&&distance<6;el.classList.toggle('on',visible);el.inert=!visible;el.setAttribute('aria-hidden',String(!visible));});
+  }else updateUI(s);
   mythology.update(t,reduce);
   cinematic.render(dt);
   fpsFrames++;

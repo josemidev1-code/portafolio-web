@@ -12,11 +12,13 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
       for (let y = 0; y <= h; y += 16) g.lineTo(x + Math.sin(y * .017 + i) * 35 + random() * 12, y);
       g.strokeStyle = `rgba(83,74,58,${.025 + random() * .065})`; g.lineWidth = .6 + random() * 2; g.stroke();
     }
+    // Pátina mineral y fisuras finas en la piedra envejecida.
+    for(let i=0;i<18;i++){const x=random()*w,y=random()*h;g.strokeStyle='rgba(48,41,32,.13)';g.lineWidth=.5;g.beginPath();g.moveTo(x,y);g.lineTo(x+random()*28,y+random()*42);g.lineTo(x+random()*45,y+random()*65);g.stroke();}
     for (let i = 0; i < 5000; i++) { g.fillStyle = `rgba(255,255,255,${random() * .1})`; g.fillRect(random()*w, random()*h, 2, 2); }
   });
-  const marble = new THREE.MeshStandardMaterial({ color: '#eee8dc', map: marbleMap, bumpMap: marbleMap, bumpScale: .018, roughness: .52 });
-  const darkStone = new THREE.MeshStandardMaterial({ color: '#a69d89', map: marbleMap, roughness: .75 });
-  const bronze = new THREE.MeshStandardMaterial({ color: '#b89a61', metalness: .78, roughness: .27 });
+  const marble = new THREE.MeshStandardMaterial({ color: '#b7afa0', map: marbleMap, bumpMap: marbleMap, bumpScale: .04, roughness: .7 });
+  const darkStone = new THREE.MeshStandardMaterial({ color: '#655e53', map: marbleMap, roughness: .75 });
+  const bronze = new THREE.MeshStandardMaterial({ color: '#ac8050', metalness: .78, roughness: .27 });
   const woodMap = canvasTex(256,512,(g,w,h)=> {
     g.fillStyle='#443d32';g.fillRect(0,0,w,h);
     for(let i=0;i<180;i++){g.strokeStyle=i%3?'rgba(20,16,11,.12)':'rgba(173,145,94,.12)';g.lineWidth=.5;
@@ -97,7 +99,15 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
     for(let x=0;x<w;x+=64){g.beginPath();g.moveTo(x,50);g.lineTo(x+54,50);g.lineTo(x+54,12);g.lineTo(x+14,12);g.lineTo(x+14,37);g.lineTo(x+39,37);g.lineTo(x+39,25);g.stroke();}
   });
   const frieze=new THREE.Mesh(new THREE.PlaneGeometry(11.8,.38),new THREE.MeshStandardMaterial({map:meanderMap,transparent:true,roughness:.65}));frieze.position.set(0,7.49,5.39);scene.add(frieze);
-  const emblem = new THREE.Mesh(new THREE.TorusGeometry(.45,.035,8,48),bronze);emblem.position.set(0,8.34,4.28);scene.add(emblem);
+  // Omega en relieve: arco abierto y dos pies, modelado en bronce rojo.
+  const omegaShape=new THREE.Shape();
+  omegaShape.moveTo(-.4101,-.3601);omegaShape.absarc(0,.05,.58,Math.PI*1.25,Math.PI*1.75,true);
+  omegaShape.lineTo(.68,-.36);omegaShape.lineTo(.68,-.52);omegaShape.lineTo(.20,-.52);omegaShape.lineTo(.20,-.29);
+  omegaShape.lineTo(.2828,-.2328);omegaShape.absarc(0,.05,.4,-Math.PI/4,Math.PI*1.25,false);
+  omegaShape.lineTo(-.20,-.29);omegaShape.lineTo(-.20,-.52);omegaShape.lineTo(-.68,-.52);omegaShape.lineTo(-.68,-.36);omegaShape.closePath();
+  const crimson=new THREE.MeshStandardMaterial({color:'#8e2421',metalness:.55,roughness:.32,emissive:'#3c0805',emissiveIntensity:.25});
+  const emblem=new THREE.Mesh(new THREE.ExtrudeGeometry(omegaShape,{depth:.09,bevelEnabled:true,bevelThickness:.018,bevelSize:.018,bevelSegments:3,curveSegments:32}),crimson);
+  emblem.scale.setScalar(1.18);emblem.position.set(0,8.38,4.3);emblem.castShadow=true;emblem.receiveShadow=true;scene.add(emblem);
   // Las puertas siguen la cámara también al retroceder.
   const doors=[];
   function portal(z,width,height,front=false) {
@@ -157,10 +167,13 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
     doors.push({z,hinges,angle:0});
   }
   portal(3.8,4.6,5.8,true);portal(-11,6.6,6.45);portal(-23,6.6,6.45);
-  const sun=new THREE.DirectionalLight('#ffe7c6',2.5);sun.position.set(-12,18,14);sun.target.position.set(0,0,-8);scene.add(sun,sun.target);
+  const sun=new THREE.DirectionalLight('#ffdfac',2.1);sun.position.set(-12,18,14);sun.target.position.set(0,0,-8);scene.add(sun,sun.target);
   sun.castShadow=true;sun.shadow.mapSize.set(compact?1024:2048,compact?1024:2048);sun.shadow.radius=4;sun.shadow.blurSamples=8;sun.shadow.camera.left=-13;sun.shadow.camera.right=13;sun.shadow.camera.top=18;sun.shadow.camera.bottom=-18;sun.shadow.camera.far=65;sun.shadow.normalBias=.035;sun.shadow.bias=-.0003;
-  const fill=new THREE.DirectionalLight('#a6c9ee',.65);fill.position.set(6,9,-20);scene.add(fill);
-  scene.add(new THREE.HemisphereLight('#c8d5e4','#544739',.72));
+  const fill=new THREE.DirectionalLight('#8eafd2',.4);fill.position.set(6,9,-20);scene.add(fill);
+  scene.add(new THREE.HemisphereLight('#c8d5e4','#29211c',.38));
+  for(const z of [-5.2,-17.2,-29.2]) {
+    const glow=new THREE.PointLight('#ed8f49',compact?5:8,10,2);glow.position.set(3.8,3.7,z+1);scene.add(glow);
+  }
   const inscription=canvasTex(1024,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.fillStyle='#d8b881';g.font='500 56px Georgia';g.textAlign='center';g.fillText('M U S E O   J O S E M I',w/2,82);});
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(5.2,.65),new THREE.MeshBasicMaterial({map:inscription,transparent:true}));sign.position.set(0,6.28,5.22);scene.add(sign);
   // Agrupa la arquitectura inmóvil por material para reducir trabajo de la GPU.

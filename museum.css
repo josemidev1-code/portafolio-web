@@ -223,3 +223,20 @@ body { touch-action: pan-y; }
 
 .motion-toggle {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:66px;font-size:9px;letter-spacing:.08em;}
 .no-webgl .motion-toggle {display:none;}
+
+.free-toggle {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:108px;font-size:10px;}
+.free-hud {position:fixed;z-index:11;bottom:35px;left:50%;transform:translateX(-50%);width:max-content;max-width:90vw;padding:14px 20px;border:1px solid var(--line);border-radius:8px;background:rgba(9,12,15,.9);color:var(--plaster);font:11px/1.6 var(--mono);text-align:center;}
+.free-camera body {overflow:hidden;}
+.free-camera #track {pointer-events:none;}
+.free-camera #scene {pointer-events:auto;cursor:grab;}
+.free-camera #scene:active {cursor:grabbing;}
+.free-camera .cursor,.free-camera .rail {display:none;}
+.no-webgl .free-toggle,.no-webgl .free-hud {display:none;}
+@media(max-width:720px),(pointer:coarse){.free-toggle,.free-hud {display:none!important;}}
+
+:root {--brass:#bf9565;--line:rgba(205,177,135,.2);}
+.label-card {background:linear-gradient(135deg,rgba(28,24,24,.95),rgba(10,14,18,.92));border-color:rgba(164,113,71,.35);}
+.free-camera .entrance,.free-camera .museum-caption {visibility:hidden!important;}
+.free-camera .exit {visibility:hidden!important;pointer-events:none!important;}
+.free-camera body {cursor:auto;}
+.free-camera a,.free-camera button {cursor:pointer!important;}

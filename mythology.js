@@ -15,12 +15,14 @@ export function addMythology(THREE,scene,canvasTex,compact) {
   const vaseGeometry=new THREE.LatheGeometry([
     [0,0],[.2,0],[.21,.08],[.14,.17],[.26,.3],[.42,.65],[.43,.9],[.32,1.14],[.16,1.28],[.15,1.51],[.23,1.57],[.23,1.65],[.17,1.65]
   ].map(([x,y])=>new THREE.Vector2(x,y)),compact?24:40);
-  const handleGeometry=new THREE.TorusGeometry(.23,.035,8,24,Math.PI*1.45);
+  const handles=[-1,1].map(side=>new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+    [.17,1.78],[.36,1.84],[.55,1.72],[.58,1.52],[.48,1.39],[.32,1.44]
+  ].map(([x,y])=>new THREE.Vector3(side*x,y,0))),24,.042,8,false));
   for(const [x,z] of [[-4,-4],[4,-7],[-4,-16],[4,-19],[-4,-28],[4,-31]]) {
     const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
     const base=new THREE.Mesh(new THREE.CylinderGeometry(.55,.6,.3,24),stone);base.position.y=.15;base.castShadow=true;base.receiveShadow=true;group.add(base);
     const vase=new THREE.Mesh(vaseGeometry,clay);vase.position.y=.3;vase.castShadow=true;vase.receiveShadow=true;group.add(vase);
-    [-1,1].forEach(side=>{const handle=new THREE.Mesh(handleGeometry,clay);handle.position.set(side*.28,1.53,0);handle.rotation.z=side<0?Math.PI*.75:Math.PI*-.25;group.add(handle);});
+    handles.forEach(geometry=>{const handle=new THREE.Mesh(geometry,clay);handle.castShadow=true;handle.receiveShadow=true;group.add(handle);});
   }
   const panels=[{name:'ATENEA',caption:'SABIDURÍA · SALA I',z:-5.5,side:1,icon:'owl'},
     {name:'HERMES',caption:'INGENIO · SALA II',z:-17.5,side:-1,icon:'wings'},
@@ -58,6 +60,23 @@ export function addMythology(THREE,scene,canvasTex,compact) {
     const group=new THREE.Group();group.position.set(p.side*5.72,3.45,p.z);group.rotation.y=p.side<0?Math.PI/2:-Math.PI/2;group.add(backing);
     const image=new THREE.Mesh(new THREE.PlaneGeometry(2,3),new THREE.MeshStandardMaterial({map:texture,roughness:.75}));image.position.z=.058;group.add(image);scene.add(group);
   });
+  // Estandartes carmesí con greca y omega, inspirados en la Grecia de God of War.
+  const bannerMap=canvasTex(256,768,(g,w,h)=>{
+    g.fillStyle='#5e1418';g.fillRect(0,0,w,h);
+    for(let x=0;x<w;x+=3){g.fillStyle=x%9?'rgba(0,0,0,.04)':'rgba(247,191,122,.05)';g.fillRect(x,0,1,h);}
+    g.strokeStyle='#b48a54';g.lineWidth=3;g.strokeRect(15,18,w-30,h-36);g.strokeRect(24,27,w-48,h-54);
+    g.fillStyle='#c4a06c';g.textAlign='center';g.font='170px Georgia';g.fillText('Ω',w/2,330);
+    g.font='18px Georgia';g.fillText('ΟΛΥΜΠΟΣ',w/2,420);
+    g.beginPath();g.moveTo(w/2,470);g.lineTo(w/2,600);g.stroke();
+  });
+  const banners=[];
+  for(const z of [-7.4,-19.4,-31.4])for(const side of [-1,1]){
+    const geo=new THREE.PlaneGeometry(1.05,3.25,8,20),p=geo.attributes.position;
+    for(let i=0;i<p.count;i++){const y=p.getY(i);if(y< -1.45)p.setY(i,y+Math.abs(p.getX(i))*.38);p.setZ(i,Math.sin(p.getX(i)*10)*.045);}
+    geo.computeVertexNormals();const banner=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:bannerMap,roughness:.98,side:THREE.DoubleSide}));
+    banner.position.set(side*5.5,5.15,z);banner.rotation.y=side<0?Math.PI/2:-Math.PI/2;banner.receiveShadow=true;scene.add(banner);banners.push({banner,original:new Float32Array(p.array),phase:z+side});
+    const rod=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.25,12),bronze);rod.rotation.x=Math.PI/2;rod.position.set(side*5.5,6.78,z);scene.add(rod);
+  }
   // Dos pebeteros custodian el pórtico. La luz fluctúa con suavidad.
   const flames=[];
   const fireMap=canvasTex(64,128,(g,w,h)=>{
@@ -73,5 +92,7 @@ export function addMythology(THREE,scene,canvasTex,compact) {
     for(let i=0;i<3;i++){const plane=new THREE.Mesh(new THREE.PlaneGeometry(.6,.85),new THREE.MeshBasicMaterial({map:fireMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,toneMapped:false}));plane.rotation.y=i*Math.PI/3;fire.add(plane);}
     const light=new THREE.PointLight('#ffb365',4,6,2);light.position.set(x,1.85,z);scene.add(light);flames.push({fire,light,phase:side*2});
   });
-  return {update(t,reduce){flames.forEach(({fire,light,phase})=>{const pulse=reduce?1:1+Math.sin(t*2.3+phase)*.07+Math.sin(t*4.1+phase)*.03;fire.scale.set(1,pulse,1);light.intensity=3.8*pulse;});}};
+  return {update(t,reduce){
+    if(!reduce)banners.forEach(({banner,original,phase})=>{const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=original[i*3+1],influence=(1.625-y)/3.25;p.setZ(i,original[i*3+2]+Math.sin(t*1.1+y*2+phase)*.025*influence);}p.needsUpdate=true;});
+    flames.forEach(({fire,light,phase})=>{const pulse=reduce?1:1+Math.sin(t*2.3+phase)*.07+Math.sin(t*4.1+phase)*.03;fire.scale.set(1,pulse,1);light.intensity=3.8*pulse;});}};
 }
