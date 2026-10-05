@@ -1,4 +1,5 @@
 /** Arquitectura del museo: mármol, pórtico dórico y puertas articuladas. */
+import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { smootherStep } from './motion.js';
 
 export function createGreekMuseum(THREE, scene, canvasTex, compact) {
@@ -112,7 +113,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
     if(!front) {[-1,1].forEach(side=>box(6-half-.35,7.5,.3,side*(half+.35+(6-half-.35)/2),3.75,z)); box(width,.8,.3,0,7.05,z);}
     const hinges=[];
     [-1,1].forEach(side=> {
-      const pivot=new THREE.Group(); pivot.position.set(side*half,0,z);scene.add(pivot);
+      const pivot=new THREE.Group(); pivot.userData.movingDoor=true; pivot.position.set(side*half,0,z);scene.add(pivot);
       const center=-side*half/2;
       box(half-.018,height,.22,center,height/2,0,doorMat,pivot);
       // Paneles en relieve, molduras finas y rosetas de bronce.
@@ -138,6 +139,19 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
       [.8,height-.8].forEach(y=>{
         const hinge=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.28,12),bronze);hinge.position.set(0,y,.05);pivot.add(hinge);
       });
+      // Cada hoja gira como dos superficies agrupadas, en lugar de decenas de piezas.
+      pivot.updateMatrixWorld(true);
+      const leafBatches=new Map();
+      [...pivot.children].forEach(mesh=>{
+        if(!leafBatches.has(mesh.material))leafBatches.set(mesh.material,[]);
+        leafBatches.get(mesh.material).push(mesh);
+      });
+      leafBatches.forEach((meshes,material)=>{
+        const geometries=meshes.map(m=>(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(m.matrix));
+        const geometry=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());
+        if(!geometry)return;
+        meshes.forEach(m=>pivot.remove(m));const merged=new THREE.Mesh(geometry,material);merged.castShadow=true;merged.receiveShadow=true;pivot.add(merged);
+      });
       hinges.push({pivot,side});
     });
     doors.push({z,hinges,angle:0});
@@ -149,6 +163,25 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact) {
   scene.add(new THREE.HemisphereLight('#c8d5e4','#544739',.72));
   const inscription=canvasTex(1024,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.fillStyle='#d8b881';g.font='500 56px Georgia';g.textAlign='center';g.fillText('M U S E O   J O S E M I',w/2,82);});
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(5.2,.65),new THREE.MeshBasicMaterial({map:inscription,transparent:true}));sign.position.set(0,6.28,5.22);scene.add(sign);
+  // Agrupa la arquitectura inmóvil por material para reducir trabajo de la GPU.
+  scene.updateMatrixWorld(true);
+  const batches=new Map();
+  scene.traverse(mesh=>{
+    if(!mesh.isMesh || mesh.material.transparent)return;
+    for(let parent=mesh.parent;parent;parent=parent.parent)if(parent.userData.movingDoor)return;
+    const key=mesh.material;
+    if(!batches.has(key))batches.set(key,[]);
+    batches.get(key).push(mesh);
+  });
+  batches.forEach((meshes,material)=>{
+    if(meshes.length<2)return;
+    const geometries=meshes.map(m=>(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(m.matrixWorld));
+    const geometry=mergeGeometries(geometries,false);
+    geometries.forEach(g=>g.dispose());
+    if(!geometry)return;
+    meshes.forEach(m=>m.parent.remove(m));
+    const merged=new THREE.Mesh(geometry,material);merged.castShadow=true;merged.receiveShadow=true;scene.add(merged);
+  });
   return { update(camera,dt,reduce) {
     doors.forEach(d=>{
       const progress=smootherStep((d.z+14-camera.position.z)/11);

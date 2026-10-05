@@ -1,11 +1,22 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/environments/RoomEnvironment.js';
 
-import { smoothTravel, smootherStep } from './motion.js';
+import { smoothTravel, routeParameter } from './motion.js';
+import { createMotionRenderer } from './cinematic.js';
+import { addMythology } from './mythology.js';
 import { createGreekMuseum } from './greek-temple.js';
 
 const root = document.documentElement;
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let savedMotion=null;try{savedMotion=localStorage.getItem('museo-motion');}catch{}
+const reduce=savedMotion?savedMotion==='reduce':matchMedia('(prefers-reduced-motion: reduce)').matches;
+root.classList.toggle('motion-full',!reduce);
+const motionButton=document.getElementById('motion-toggle');
+motionButton.textContent=reduce?'Activar animaciones':'Reducir movimiento';
+motionButton.setAttribute('aria-pressed',String(!reduce));
+motionButton.addEventListener('click',()=>{
+  try{localStorage.setItem('museo-motion',reduce?'full':'reduce');}catch{}
+  location.reload();
+});
 const finePointer = matchMedia('(pointer: fine)').matches;
 let small = innerWidth < 720;
 
@@ -68,20 +79,19 @@ const VH_PER_UNIT = small ? 82 : 72;
 track.style.height = `calc(${total * VH_PER_UNIT}vh + 100vh)`;
 
 const curve = new THREE.CatmullRomCurve3(STOPS.map(s => new THREE.Vector3(...s.pos)), false, 'centripetal');
-const ease = smootherStep;
-
+// Recorrido continuo: las cartelas ralentizan el paso sin congelar la cámara.
+const routeAnchors = [{u:0,t:0}];
+STOPS.forEach((s,i) => {
+  if(i===0 || i===STOPS.length-1)return;
+  const hold=segs.find(g=>g.type==='hold' && g.i===i);
+  const incoming=segs.find(g=>g.type==='move' && g.i===i-1);
+  routeAnchors.push({u:hold?(hold.a+hold.b)/2:incoming.b,t:i/(STOPS.length-1)});
+});
+routeAnchors.push({u:total,t:1});
+const lookCurve = new THREE.CatmullRomCurve3(STOPS.map(s=>new THREE.Vector3(...s.look)),false,'centripetal');
 function sample(u) {
-  // devuelve posición, look e índice de parada actual para u en [0,total]
-  u = Math.min(Math.max(u, 0), total);
-  const seg = segs.find(s => u >= s.a && u <= s.b) || segs[segs.length - 1];
-  const n = STOPS.length - 1;
-  if (seg.type === 'hold') {
-    return { pos: curve.getPoint(seg.i / n), look: new THREE.Vector3(...STOPS[seg.i].look), at: seg.i, k: 0 };
-  }
-  const k = ease((u - seg.a) / (seg.b - seg.a));
-  const pos = curve.getPoint((seg.i + k) / n);
-  const look = new THREE.Vector3(...STOPS[seg.i].look).lerp(new THREE.Vector3(...STOPS[seg.i + 1].look), k);
-  return { pos, look, at: k < .5 ? seg.i : seg.i + 1, k };
+  const parameter=routeParameter(u,routeAnchors);
+  return {pos:curve.getPoint(parameter),look:lookCurve.getPoint(parameter),at:Math.round(parameter*(STOPS.length-1))};
 }
 // centro de scroll (en unidades) de cada parada real, para navegar
 const stopU = i => { const h = segs.find(s => s.type === 'hold' && s.i === i); return h ? (h.a + h.b) / 2 : 0; };
@@ -134,6 +144,8 @@ function canvasTex(w, h, draw, opts = {}) {
   return t;
 }
 const architecture = createGreekMuseum(THREE, scene, canvasTex, small);
+const mythology = addMythology(THREE,scene,canvasTex,small);
+const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact:small,reduce});
 
 /* Textos de pared: rótulos de sala pintados sobre el muro */
 function wallText(lines, { w = 4, h = 1.6, size = 150, color = '#524638', sub, align = 'left' } = {}) {
@@ -150,12 +162,12 @@ function wallText(lines, { w = 4, h = 1.6, size = 150, color = '#524638', sub, a
 
 /* ---------- Urnas ---------- */
 const urns = [];
-const glassMat = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: .04, metalness: 0, transmission: small ? 0 : .96, thickness: .05, ior: 1.45, transparent: true, opacity: small ? .14 : 1, envMapIntensity: 1, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+const glassMat = new THREE.MeshStandardMaterial({ color: '#c3d5db', roughness: .22, metalness: .08, transparent: true, opacity: .07, envMapIntensity: .35, side: THREE.FrontSide, depthWrite: false });
 const plinthMat = new THREE.MeshStandardMaterial({ color: '#e8e2d8', roughness: .55 });
 
 function addSpot(x, z, color, intensity, target) {
   const spot = new THREE.SpotLight(color, intensity, 14, Math.PI / 9, .55, 1.4);
-  spot.position.set(x, 6.8, z + 1.4); spot.target = target; spot.castShadow = !small;
+  spot.position.set(x, 6.8, z + 1.4); spot.target = target; spot.castShadow = false;
   spot.shadow.mapSize.set(1024, 1024); spot.shadow.radius = 2; spot.shadow.blurSamples = 6; spot.shadow.bias = -.0004; scene.add(spot); scene.add(spot.target);
   // cono volumétrico falso
   const coneH = 5.4;
@@ -309,38 +321,15 @@ U1.ficha = 0; U2.ficha = 1; U3.ficha = -1;
 
 /* Rótulos de sala en los muros */
 const rooms = [
-  { lines: ['Sala I', 'Sistemas'], sub: 'JM-001', z: -5.6, x: -5.79 },
-  { lines: ['Sala II', 'Automatización'], sub: 'JM-002', z: -17.6, x: 5.79 },
-  { lines: ['Sala III', 'Lo que viene'], sub: 'JM-003', z: -29.6, x: -5.79 }
+  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -5.6, x: -5.79 },
+  { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', z: -17.6, x: 5.79 },
+  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -29.6, x: -5.79 }
 ];
 rooms.forEach(r => {
   const t = wallText(r.lines, { w: 5, h: 2, size: 140, sub: r.sub + ' · colección permanente' });
   t.position.set(r.x, 3.4, r.z); t.rotation.y = r.x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(t);
 });
 // cuadros en los muros: lienzos abstractos con luz rasante
-function canvasArt(seed, hue) {
-  return canvasTex(512, 640, (g, W, H) => {
-    let s = seed; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-    g.fillStyle = `hsl(${hue},12%,10%)`; g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 14; i++) {
-      g.strokeStyle = `hsla(${hue + r() * 40 - 20},${30 + r() * 40}%,${40 + r() * 35}%,${.35 + r() * .5})`;
-      g.lineWidth = 2 + r() * 26; g.beginPath(); g.moveTo(r() * W, r() * H);
-      g.bezierCurveTo(r() * W, r() * H, r() * W, r() * H, r() * W, r() * H); g.stroke();
-    }
-    g.font = '500 18px "JetBrains Mono", monospace'; g.fillStyle = 'rgba(236,230,220,.5)'; g.fillText('</>', 30, H - 30);
-  });
-}
-const frameMat = new THREE.MeshStandardMaterial({ color: '#a7824b', roughness: .4, metalness: .3 });
-[[-5.76, -10.5, 150, 11], [5.76, -10.5, 20, 22], [5.76, -23.5, 40, 33], [-5.76, -23.5, 210, 44], [5.76, -2, 130, 55], [-5.76, -35, 30, 66]].forEach(([x, z, hue, seed]) => {
-  const f = new THREE.Group();
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.1, .06), frameMat); f.add(frame);
-  const art = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.9), new THREE.MeshStandardMaterial({ map: canvasArt(seed, hue), roughness: .7 }));
-  art.position.z = .035; f.add(art);
-  f.position.set(x, 2.6, z); f.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(f);
-  const wash = new THREE.SpotLight('#ffe2b8', small ? 18 : 30, 6, Math.PI / 7, .7, 1.6);
-  wash.position.set(x * .75, 6.6, z); wash.target.position.set(x, 2.6, z); scene.add(wash, wash.target);
-});
-
 /* Muro final: neón de contacto */
 const neon = wallText(['Gracias por', 'la visita'], { w: 6, h: 2.4, size: 150, color: '#f6e7cc', align: 'center' });
 neon.material = new THREE.MeshBasicMaterial({ map: neon.userData.tex, transparent: true, toneMapped: false, color: new THREE.Color('#ffd9a0').multiplyScalar(1.4) });
@@ -463,16 +452,19 @@ function updateUI(s) {
 }
 
 const clock = new THREE.Clock();
-let screenAcc = 0, running = true;
+let screenAcc = 0, running = true, fpsFrames = 0, fpsStart = 0;
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); running = false; window.museumFallback(); });
 canvas.addEventListener('webglcontextrestored', () => location.reload());
-document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { clock.getDelta(); loop(); } });
+document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { clock.getDelta(); cinematic.reset(); loop(); } });
 function loop() {
   if (!running) return;
   requestAnimationFrame(loop);
   const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
-  const damp = reduce ? 1 : 1 - Math.pow(.0009, dt);
-  smoothU += (scrollU - smoothU) * damp;
+  if(reduce){smoothU=scrollU;travelVelocity=0;}
+  else {
+    const travel=smoothTravel(smoothU,scrollU,travelVelocity,dt,.38,directNavigation?4:2.2);
+    smoothU=travel.value;travelVelocity=travel.velocity;
+  }
   const s = sample(smoothU);
   camPos.copy(s.pos);
   camLook.lerp(s.look, reduce ? 1 : 1 - Math.exp(-5 * dt));
@@ -508,17 +500,23 @@ function loop() {
   cursor.style.transform = `translate3d(${cx}px,${cy}px,0)`;
 
   updateUI(s);
-  renderer.render(scene, camera);
+  mythology.update(t,reduce);
+  cinematic.render(dt);
+  fpsFrames++;
+  if(t-fpsStart>=1){canvas.dataset.frameRate=String(Math.round(fpsFrames/(t-fpsStart)));fpsFrames=0;fpsStart=t;}
 }
 
 addEventListener('resize', () => {
   frameRoute();
   curve.points = STOPS.map(s => new THREE.Vector3(...s.pos));
   curve.updateArcLengths();
+  lookCurve.points = STOPS.map(s => new THREE.Vector3(...s.look));
+  lookCurve.updateArcLengths();
   camera.fov = small ? 62 : 50;
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 720 ? 1.35 : 1.75));
+  cinematic.resize();
   readScroll();
 });
 

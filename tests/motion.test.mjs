@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { smoothTravel, smootherStep } from '../motion.js';
+import { smoothTravel, smootherStep, routeParameter } from '../motion.js';
 
 function travel(target, fps, seconds) {
   let value=0, velocity=0;
@@ -34,4 +34,14 @@ test('Los tramos comienzan y terminan sin cambios bruscos de velocidad',()=>{
 test('Al alcanzar el destino no queda una sacudida por velocidad residual',()=>{
   const step=smoothTravel(2,2,1,1/60);
   assert.equal(step.value,2);assert.equal(step.velocity,0);
+});
+
+test('El recorrido no se congela ni salta al cruzar las salas',()=>{
+  const anchors=[{u:0,t:0},{u:3.5,t:.2},{u:5.2,t:.4},{u:8,t:.65},{u:12,t:1}];
+  let previous=0;
+  for(let u=.01;u<12;u+=.01){const value=routeParameter(u,anchors);assert.ok(value>previous && value<=1);previous=value;}
+  for(const p of anchors.slice(1,-1)){
+    const h=.0001,left=(routeParameter(p.u,anchors)-routeParameter(p.u-h,anchors))/h,right=(routeParameter(p.u+h,anchors)-routeParameter(p.u,anchors))/h;
+    assert.ok(left>.01 && right>.01);assert.ok(Math.abs(left-right)<.0001);
+  }
 });
