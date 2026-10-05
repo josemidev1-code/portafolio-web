@@ -1,27 +1,48 @@
 # Museo Josemi — Portafolio de José Miguel Miralles Gandia
 
-Portafolio web presentado como un museo virtual con un recorrido 3D que avanza con la rueda del ratón.
+Un museo digital de inspiración griega para explorar proyectos web y aplicaciones. El recorrido comienza ante un templo de mármol y atraviesa sus salas con la rueda del ratón o deslizando hacia arriba en el móvil.
 
-## Tecnologías
+## Qué hace cada tecnología
 
-- HTML, CSS y JavaScript incluidos en `index.html`.
-- Three.js 0.169.0 cargado desde jsDelivr.
-- Tipografías de Google Fonts.
+- **HTML** (`index.html`): contenido, navegación, fichas de proyectos y contacto.
+- **CSS** (`museum.css`): tipografía, composición, paneles, transiciones y adaptación a móvil.
+- **JavaScript y Three.js** (`museum.js`): escena 3D, cámara, recorrido e interacción. Three.js dibuja la escena utilizando WebGL.
+- **Arquitectura** (`greek-temple.js`): columnas acanaladas, frontón, mármol generado, lucernarios, iluminación y puertas articuladas.
+
+Three.js 0.169.0 se carga desde jsDelivr y las tipografías desde Google Fonts. Se necesita conexión a Internet para estas dependencias; las geometrías y texturas del edificio se generan en la página.
 
 ## Ejecutar en local
 
-Sirve la carpeta con un servidor local:
+Desde la carpeta del repositorio:
 
 ```bash
 python -m http.server 8000
 ```
 
-Abre `http://localhost:8000`. La escena 3D y las fuentes requieren conexión a Internet para cargar sus dependencias externas.
+Abre `http://localhost:8000`. Usa un servidor HTTP para cargar los módulos de JavaScript.
 
-## Contenido
+## Recorrido
 
-- Recorrido por las salas y los proyectos del museo.
-- Presentación de JOSEMI-OS y enlaces a GitHub.
-- Contacto por correo electrónico y LinkedIn.
+- Entrada exterior con pórtico dórico y detalles de bronce.
+- Puertas que se abren al acercarse y se cierran al retroceder.
+- Tres salas con urnas, proyectos y fichas ampliadas.
+- Cámara suavizada, luz cálida, sombras en ordenador y partículas ambientales.
+- Navegación por rueda, deslizamiento nativo, botones del plano y teclado.
+- Encuadre vertical específico y menor resolución gráfica en móvil.
+- Respeto de la preferencia de movimiento reducido, pausa al ocultar la pestaña y catálogo alternativo cuando WebGL o la carga de la escena fallan.
 
-La página principal contiene los estilos y la lógica de esta versión. Los archivos `style.css`, `script.js` y los documentos de decisiones anteriores se conservan como referencia de la versión previa.
+## Referencias visuales
+
+La dirección de diseño toma como referencia los recorridos inmersivos de CSS Design Awards: [20 Years of Xbox Museum](https://www.cssdesignawards.com/woty2021/sites/20-years-of-xbox-museum) y [EXPO 58](https://www.cssdesignawards.com/sites/expo-58-immersive-experience/43934). El templo y las animaciones se construyen específicamente para este portafolio.
+
+## Comprobación
+
+```bash
+node --check museum.js
+node --check greek-temple.js
+git diff --check
+```
+
+Verifica también en el navegador la entrada, el paso por las puertas, las fichas y el contacto. La fluidez depende de la GPU del dispositivo; comprobar el diseño a tamaño móvil no sustituye una prueba en un teléfono real.
+
+Los archivos `style.css`, `script.js` y `docs/adr/` conservan la implementación y las decisiones de la versión anterior; la página actual utiliza los archivos `museum.*` y `greek-temple.js`.
