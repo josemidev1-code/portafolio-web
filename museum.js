@@ -30,7 +30,7 @@ const FICHAS = [
       'La web arranca con una terminal que escribe JOSEMI-OS en pantalla con ocho efectos distintos y después abre el escritorio. Todo está hecho con HTML, CSS y JavaScript, sin frameworks, y tiene pruebas para la lógica del Arcade y de la terminal.'
     ],
     list: ['Ventanas que se arrastran, minimizan, maximizan y redimensionan', 'Terminal con comandos: empieza por ayuda', 'Arcade con minijuegos', 'Seis fondos ASCII animados y siete temas', 'Buscador de aplicaciones con Ctrl+K', 'Easter eggs y acertijos escondidos'],
-    links: [['Código en GitHub ↗', 'https://github.com/josemidev1-code/JOSEMI-OS']]
+    links: [['Probar JOSEMI-OS ↗', 'https://josemidev1.site'], ['Código en GitHub ↗', 'https://github.com/josemidev1-code/JOSEMI-OS']]
   },
   {
     inv: 'Nº inv. JM-002 · Sala II', title: 'Asistente de gimnasio', accent: '#8db4ff',
