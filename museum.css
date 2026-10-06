@@ -8,8 +8,9 @@
   --brass: #c9a46a;        /* latón de las cartelas */
   --phosphor: #8cf0b4;     /* fósforo de JOSEMI-OS (urna 01) */
   --line: rgba(236, 230, 220, .14);
-  --display: "Big Shoulders Display", "Oswald", "Arial Narrow", sans-serif;
-  --serif: "Instrument Serif", "Times New Roman", serif;
+  --display: "Cinzel", "Trajan Pro", "Times New Roman", serif;
+  --serif: "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  --label: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
   --body: "Instrument Sans", "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
   color-scheme: dark;
@@ -32,14 +33,14 @@ a { color: inherit; }
 .topbar > * { pointer-events: auto; }
 .mark { display: flex; align-items: baseline; gap: 10px; text-decoration: none; }
 .mark b { white-space: nowrap; font-family: var(--display); font-weight: 900; font-size: 22px; letter-spacing: .02em; text-transform: uppercase; }
-.mark span { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; color: var(--dust); text-transform: uppercase; }
+.mark span { font-family: var(--label); font-size: 10.5px; letter-spacing: .14em; color: var(--dust); text-transform: uppercase; }
 .top-actions { display: flex; gap: 8px; }
-.pill { font: 500 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--plaster); background: rgba(8,9,11,.55); border: 1px solid var(--line); padding: 11px 14px; border-radius: 99px; cursor: pointer; text-decoration: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: border-color .3s, background .3s; }
+.pill { font: 500 11px/1 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--plaster); background: rgba(8,9,11,.55); border: 1px solid var(--line); padding: 11px 14px; border-radius: 99px; cursor: pointer; text-decoration: none; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: border-color .3s, background .3s; }
 .pill:hover { border-color: var(--brass); background: rgba(201,164,106,.12); }
 
 /* Portada (entrada del museo) */
 .entrance { position: fixed; inset: 0; z-index: 5; display: grid; align-content: end; padding: 0 clamp(16px, 4vw, 56px) clamp(84px, 12vh, 130px); pointer-events: none; }
-.entrance .kicker { font: 500 11px/1.4 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--brass); display: flex; gap: 14px; align-items: center; margin: 0 0 18px; }
+.entrance .kicker { font: 500 11px/1.4 var(--label); letter-spacing: .22em; text-transform: uppercase; color: var(--brass); display: flex; gap: 14px; align-items: center; margin: 0 0 18px; }
 .entrance .kicker::before { content: ""; width: 38px; height: 1px; background: var(--brass); }
 .entrance h1 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(64px, 15.5vw, 250px); line-height: .8; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
 .entrance h1 .row { display: block; overflow: hidden; padding-bottom: .04em; }
@@ -50,7 +51,7 @@ a { color: inherit; }
 .entrance .sub { display: grid; grid-template-columns: minmax(0, 46ch) auto; justify-content: space-between; align-items: end; gap: 24px; margin-top: 26px; }
 .entrance .sub p { margin: 0; color: #c9c3b9; font-size: clamp(15px, 1.25vw, 18px); max-width: 46ch; }
 .entrance .sub p strong { color: var(--plaster); font-weight: 600; }
-.scroll-hint { font: 500 11px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dust); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.scroll-hint { font: 500 11px/1 var(--label); letter-spacing: .2em; text-transform: uppercase; color: var(--dust); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
 .wheel { width: 20px; height: 32px; border: 1.5px solid var(--dust); border-radius: 12px; position: relative; }
 .wheel::after { content: ""; position: absolute; left: 50%; top: 6px; width: 2px; height: 6px; margin-left: -1px; border-radius: 2px; background: var(--plaster); animation: wheel 1.8s cubic-bezier(.6,0,.4,1) infinite; }
 @keyframes wheel { 0%{opacity:0;transform:translateY(0)} 30%{opacity:1} 100%{opacity:0;transform:translateY(10px)} }
@@ -60,13 +61,13 @@ a { color: inherit; }
 .label-card.left { right: auto; left: clamp(16px, 4vw, 56px); }
 .label-card.on { opacity: 1; transform: none; pointer-events: auto; }
 .label-card::before { content: ""; position: absolute; left: 26px; right: 26px; top: 0; height: 2px; background: var(--accent, var(--brass)); }
-.lc-head { display: flex; justify-content: space-between; gap: 12px; font: 500 10.5px/1.3 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); }
+.lc-head { display: flex; justify-content: space-between; gap: 12px; font: 500 10.5px/1.3 var(--label); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); }
 .lc-head .inv { color: var(--accent, var(--brass)); }
 .label-card h2 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(40px, 4.4vw, 60px); line-height: .88; overflow-wrap: break-word; margin: 16px 0 6px; letter-spacing: .005em; text-wrap: balance; }
 .label-card .artist { font-family: var(--serif); font-style: italic; font-size: 19px; color: #d8d1c6; margin: 0 0 14px; }
 .label-card p { margin: 0 0 14px; color: #bdb7ad; font-size: 14.5px; }
 .facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0 0 18px; padding: 14px 0 0; border-top: 1px solid var(--line); font-size: 13px; }
-.facts dt { font: 500 10.5px/1.9 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dust); }
+.facts dt { font: 500 10.5px/1.9 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--dust); }
 .facts dd { margin: 0; color: var(--plaster); min-width: 0; }
 .lc-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn { display: inline-flex; align-items: center; gap: 10px; font: 600 13px/1 var(--body); letter-spacing: .02em; padding: 13px 18px; border-radius: 99px; text-decoration: none; cursor: pointer; border: 1px solid var(--plaster); background: var(--plaster); color: var(--night); transition: background .3s, color .3s, border-color .3s; }
@@ -78,23 +79,23 @@ a { color: inherit; }
 
 /* Rótulo de sala (gran título que cruza la pantalla al entrar en una sala) */
 .room-title { position: fixed; z-index: 4; left: clamp(16px, 4vw, 56px); top: 50%; transform: translateY(-50%); pointer-events: none; font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(56px, 11vw, 180px); line-height: .82; color: transparent; -webkit-text-stroke: 1px rgba(236,230,220,.35); opacity: 0; transition: opacity .7s ease; max-width: 9ch; }
-.room-title small { display: block; font: 500 11px/1 var(--mono); letter-spacing: .22em; -webkit-text-stroke: 0; color: var(--brass); margin-bottom: 18px; }
+.room-title small { display: block; font: 500 11px/1 var(--label); letter-spacing: .22em; -webkit-text-stroke: 0; color: var(--brass); margin-bottom: 18px; }
 .room-title.on { opacity: 1; }
 
 /* Salida / contacto */
 .exit { position: fixed; inset: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; background: radial-gradient(60% 50% at 50% 50%, rgba(8,9,11,.55), transparent 80%); text-align: center; padding: 0 16px; opacity: 0; pointer-events: none; transition: opacity .8s ease; }
 .exit.on { opacity: 1; pointer-events: auto; }
-.exit .kicker { font: 500 11px/1 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--brass); margin: 0 0 20px; }
+.exit .kicker { font: 500 11px/1 var(--label); letter-spacing: .22em; text-transform: uppercase; color: var(--brass); margin: 0 0 20px; }
 .exit h2 { font-family: var(--display); font-weight: 900; text-transform: uppercase; font-size: clamp(60px, 11vw, 190px); line-height: .8; margin: 0; }
 .exit h2 em { font-family: var(--serif); font-weight: 400; text-transform: none; color: var(--brass); }
 .exit p { color: #c9c3b9; max-width: 44ch; margin: 22px auto 26px; font-size: 16px; }
 .mailbox { display: inline-flex; align-items: center; gap: 4px; margin: 0 auto 18px; padding: 6px 6px 6px 18px; border: 1px solid var(--line); border-radius: 99px; background: rgba(8,9,11,.6); max-width: 100%; }
-.mailbox a { font: 500 clamp(13px, 1.6vw, 16px)/1 var(--mono); text-decoration: none; overflow-wrap: anywhere; user-select: all; }
+.mailbox a { font: 500 clamp(13px, 1.6vw, 16px)/1 var(--label); text-decoration: none; overflow-wrap: anywhere; user-select: all; }
 .mailbox button { margin-left: 8px; }
 .exit .lc-actions { justify-content: center; }
 
 /* Raíl de progreso: plano del recorrido */
-.rail { position: fixed; z-index: 10; left: clamp(16px, 4vw, 56px); right: clamp(16px, 4vw, 56px); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; font: 500 10.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); }
+.rail { position: fixed; z-index: 10; left: clamp(16px, 4vw, 56px); right: clamp(16px, 4vw, 56px); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; font: 500 10.5px/1 var(--label); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); }
 .rail-line { position: relative; height: 1px; background: var(--line); }
 .rail-fill { position: absolute; left: 0; top: 0; height: 1px; width: 0; background: var(--plaster); }
 .rail-stops { position: absolute; inset: 0; }
@@ -119,11 +120,11 @@ dialog.ficha::backdrop { background: rgba(4,5,6,.72); backdrop-filter: blur(6px)
 .ficha ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .ficha li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; color: #d4cec4; font-size: 14px; }
 .ficha li::before { content: "—"; color: var(--accent, var(--brass)); }
-.ficha h4 { font: 500 10.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); margin: 0 0 12px; }
+.ficha h4 { font: 500 10.5px/1 var(--label); letter-spacing: .16em; text-transform: uppercase; color: var(--dust); margin: 0 0 12px; }
 
 /* Cursor de museo */
 .cursor { opacity: 0; position: fixed; z-index: 50; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 1px solid rgba(236,230,220,.6); border-radius: 50%; pointer-events: none; transition: width .35s cubic-bezier(.16,1,.3,1), height .35s cubic-bezier(.16,1,.3,1), margin .35s cubic-bezier(.16,1,.3,1), background .35s, border-color .35s; display: grid; place-items: center; mix-blend-mode: normal; }
-.cursor span { font: 600 10px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--night); opacity: 0; transition: opacity .2s; white-space: nowrap; }
+.cursor span { font: 600 10px/1 var(--label); letter-spacing: .14em; text-transform: uppercase; color: var(--night); opacity: 0; transition: opacity .2s; white-space: nowrap; }
 .cursor.view { width: 92px; height: 92px; margin: -46px 0 0 -46px; background: var(--plaster); border-color: var(--plaster); }
 .cursor.view span { opacity: 1; }
 @media (pointer: fine) { body.has-cursor, body.has-cursor a, body.has-cursor button { cursor: none; } }
@@ -134,7 +135,7 @@ dialog.ficha::backdrop { background: rgba(4,5,6,.72); backdrop-filter: blur(6px)
 .ready .curtain { clip-path: inset(0 0 100% 0); pointer-events: none; }
 .curtain-in { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 0 16px; }
 .curtain-in .count { font-family: var(--display); font-weight: 900; font-size: clamp(80px, 16vw, 180px); line-height: .8; font-variant-numeric: tabular-nums; }
-.curtain-in .msg { font: 500 11px/1.4 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--dust); }
+.curtain-in .msg { font: 500 11px/1.4 var(--label); letter-spacing: .22em; text-transform: uppercase; color: var(--dust); }
 
 /* Respaldo sin WebGL: catálogo legible */
 .fallback { position: relative; z-index: 7; max-width: 760px; margin: 0 auto; padding-block: 120px 80px; padding-inline: 16px; display: none; }
@@ -179,7 +180,7 @@ body { touch-action: pan-y; }
 .entrance .sub { margin-top: 20px; }
 .entrance .sub p { font-size: 14px; max-width: 43ch; }
 .entrance .kicker { font-size: 10px; letter-spacing: .2em; }
-.museum-caption { position: fixed; top: 18%; left: 0; right: 0; z-index: 4; pointer-events: none; text-align: center; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .25em; color: #d5c4a4; }
+.museum-caption { position: fixed; top: 18%; left: 0; right: 0; z-index: 4; pointer-events: none; text-align: center; font: 10px var(--label); text-transform: uppercase; letter-spacing: .25em; color: #d5c4a4; }
 .museum-caption span { display: block; font: 16px var(--serif); letter-spacing: .45em; margin-bottom: 10px; }
 .hint-mobile { display: none; }
 .scroll-hint { font-size: 10px; letter-spacing: .12em; }
@@ -225,7 +226,7 @@ body { touch-action: pan-y; }
 .no-webgl .motion-toggle {display:none;}
 
 .free-toggle {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:108px;font-size:10px;}
-.free-hud {position:fixed;z-index:11;bottom:35px;left:50%;transform:translateX(-50%);width:max-content;max-width:90vw;padding:14px 20px;border:1px solid var(--line);border-radius:8px;background:rgba(9,12,15,.9);color:var(--plaster);font:11px/1.6 var(--mono);text-align:center;}
+.free-hud {position:fixed;z-index:11;bottom:35px;left:50%;transform:translateX(-50%);width:max-content;max-width:90vw;padding:14px 20px;border:1px solid var(--line);border-radius:8px;background:rgba(9,12,15,.9);color:var(--plaster);font:11px/1.6 var(--label);text-align:center;}
 .free-camera body {overflow:hidden;}
 .free-camera #track {pointer-events:none;}
 .free-camera #scene {pointer-events:auto;cursor:grab;}
@@ -240,3 +241,46 @@ body { touch-action: pan-y; }
 .free-camera .exit {visibility:hidden!important;pointer-events:none!important;}
 .free-camera body {cursor:auto;}
 .free-camera a,.free-camera button {cursor:pointer!important;}
+
+/* Tipografía monumental: capitales romanas para títulos, Garamond para los acentos y una
+   sans legible para el texto. Los rótulos pequeños pierden el aire de terminal. */
+:root { --night: #0b0a09; --plaster: #efe7da; --dust: #a59a8a; --brass: #c9a46a; --line: rgba(214,186,140,.22); }
+body { font-size: 15.5px; line-height: 1.6; }
+.mark b { font-family: var(--display); font-weight: 600; font-size: 17px; letter-spacing: .12em; text-transform: uppercase; }
+.mark span, .pill, .lc-head, .facts dt, .rail, .scroll-hint, .room-title small, .ficha h4, .exit .kicker, .entrance .kicker, .curtain-in .msg { font-family: var(--label); font-weight: 600; }
+.pill { border-radius: 2px; letter-spacing: .16em; background: rgba(12,10,8,.55); }
+.entrance h1 { font-family: var(--display); font-weight: 600; text-transform: uppercase; font-size: clamp(48px, 7.4vw, 124px); line-height: .98; letter-spacing: .04em; text-shadow: 0 2px 30px rgba(0,0,0,.45); }
+.entrance h1 .row { display: block; margin: 0; padding-bottom: .02em; }
+.entrance h1 .row:nth-child(2) > span { color: #e3c590; }
+.entrance .kicker { font-size: 11px; letter-spacing: .3em; }
+.entrance .sub p { font-size: 15.5px; max-width: 44ch; color: #d9d0c2; }
+.entrance { background: linear-gradient(90deg, rgba(10,8,6,.62), rgba(10,8,6,.2) 48%, transparent 70%), linear-gradient(0deg, rgba(10,8,6,.86), rgba(10,8,6,.35) 38%, transparent 60%); }
+.museum-caption { color: #d9c7a5; }
+.museum-caption span { font-family: var(--display); font-weight: 500; font-size: 17px; letter-spacing: .5em; }
+.label-card { background: linear-gradient(160deg, rgba(26,21,17,.94), rgba(12,11,10,.93)); border: 1px solid rgba(201,164,106,.28); border-radius: 3px; }
+.label-card h2 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 3vw, 42px); line-height: 1.04; letter-spacing: .03em; margin: 14px 0 6px; }
+.label-card .artist { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 21px; color: #e2d6c3; }
+.label-card p { color: #cbc2b4; font-size: 15px; }
+.facts { font-size: 14px; }
+.btn { border-radius: 2px; font-weight: 600; font-size: 13px; letter-spacing: .06em; padding: 12px 18px; }
+.btn.ghost { border-color: rgba(214,186,140,.35); }
+.room-title { font-family: var(--display); font-weight: 600; font-size: clamp(44px, 7.5vw, 124px); line-height: .98; letter-spacing: .04em; max-width: 11ch; -webkit-text-stroke: 1px rgba(236,222,196,.32); }
+.exit h2 { font-family: var(--display); font-weight: 600; font-size: clamp(48px, 8vw, 128px); line-height: 1; letter-spacing: .03em; }
+.exit h2 em { font-family: var(--display); font-style: normal; }
+.exit p { font-size: 16.5px; }
+.ficha h3 { font-family: var(--display); font-weight: 600; font-size: clamp(36px, 6vw, 68px); line-height: 1.02; letter-spacing: .03em; }
+dialog.ficha { background: #12100e; border-color: rgba(201,164,106,.28); border-radius: 3px; }
+.ficha-grid p { font-size: 15.5px; }
+.fallback h2 { font-family: var(--display); font-weight: 600; font-size: 40px; line-height: 1.05; }
+.curtain-in .count { font-family: var(--display); font-weight: 500; }
+.cursor span { font-family: var(--label); }
+.mailbox a { font-family: var(--label); font-weight: 500; letter-spacing: .02em; }
+.mailbox { border-radius: 3px; }
+@media (max-width: 720px) {
+  .entrance h1 { font-size: clamp(36px, 11vw, 60px); }
+  .entrance .kicker { font-size: 9.5px; letter-spacing: .18em; }
+  .entrance .sub p { font-size: 13.5px; }
+  .label-card h2 { font-size: 28px; }
+  .mark b { font-size: 14px; }
+  .exit h2 { font-size: 12vw; }
+}

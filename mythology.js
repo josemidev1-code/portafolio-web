@@ -1,98 +1,76 @@
-/** Motivos originales de Atenea, Hermes y Hefesto para las salas del museo. */
-export function addMythology(THREE,scene,canvasTex,compact) {
-  const stone=new THREE.MeshStandardMaterial({color:'#dbd2bd',roughness:.72});
-  const bronze=new THREE.MeshStandardMaterial({color:'#a99060',metalness:.68,roughness:.36});
-  const clayMap=canvasTex(512,512,(g,w,h)=>{
-    g.fillStyle='#ac623e';g.fillRect(0,0,w,h);
-    g.fillStyle='#292421';g.fillRect(0,65,w,20);g.fillRect(0,390,w,20);
-    g.lineWidth=4;g.strokeStyle='#292421';
-    for(let x=0;x<w;x+=48){g.beginPath();g.moveTo(x,40);g.lineTo(x+38,40);g.lineTo(x+38,15);g.lineTo(x+12,15);g.lineTo(x+12,30);g.lineTo(x+26,30);g.stroke();}
-    // Siluetas de hojas de olivo en la cerámica de figuras negras.
-    for(let x=0;x<w;x+=85){g.beginPath();g.moveTo(x+25,340);g.quadraticCurveTo(x+60,250,x+40,140);g.stroke();
-      for(let y=170;y<335;y+=32){g.beginPath();g.ellipse(x+35,y,18,6,-.6,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(x+55,y+14,18,6,.6,0,Math.PI*2);g.fill();}}
-  });
-  const clay=new THREE.MeshStandardMaterial({map:clayMap,roughness:.64,bumpMap:clayMap,bumpScale:.01});
-  const vaseGeometry=new THREE.LatheGeometry([
-    [0,0],[.2,0],[.21,.08],[.14,.17],[.26,.3],[.42,.65],[.43,.9],[.32,1.14],[.16,1.28],[.15,1.51],[.23,1.57],[.23,1.65],[.17,1.65]
-  ].map(([x,y])=>new THREE.Vector2(x,y)),compact?24:40);
-  const handles=[-1,1].map(side=>new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-    [.17,1.78],[.36,1.84],[.55,1.72],[.58,1.52],[.48,1.39],[.32,1.44]
-  ].map(([x,y])=>new THREE.Vector3(side*x,y,0))),24,.042,8,false));
-  for(const [x,z] of [[-4,-4],[4,-7],[-4,-16],[4,-19],[-4,-28],[4,-31]]) {
-    const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
-    const base=new THREE.Mesh(new THREE.CylinderGeometry(.55,.6,.3,24),stone);base.position.y=.15;base.castShadow=true;base.receiveShadow=true;group.add(base);
-    const vase=new THREE.Mesh(vaseGeometry,clay);vase.position.y=.3;vase.castShadow=true;vase.receiveShadow=true;group.add(vase);
-    handles.forEach(geometry=>{const handle=new THREE.Mesh(geometry,clay);handle.castShadow=true;handle.receiveShadow=true;group.add(handle);});
-  }
-  const panels=[{name:'ATENEA',caption:'SABIDURÍA · SALA I',z:-5.5,side:1,icon:'owl'},
-    {name:'HERMES',caption:'INGENIO · SALA II',z:-17.5,side:-1,icon:'wings'},
-    {name:'HEFESTO',caption:'CREACIÓN · SALA III',z:-29.5,side:1,icon:'hammer'}];
-  function drawIcon(g,icon,x,y) {
-    g.save();g.translate(x,y);g.strokeStyle='#ddbd83';g.fillStyle='#ddbd83';g.lineWidth=5;
-    if(icon==='owl') {
-      g.beginPath();g.ellipse(0,20,76,105,0,0,Math.PI*2);g.stroke();
-      [-1,1].forEach(side=>{g.beginPath();g.arc(side*37,-12,33,0,Math.PI*2);g.stroke();g.beginPath();g.arc(side*37,-12,10,0,Math.PI*2);g.fill();
-        g.beginPath();g.moveTo(side*70,-36);g.lineTo(side*85,-85);g.lineTo(side*20,-46);g.stroke();});
-      g.beginPath();g.moveTo(-12,13);g.lineTo(0,39);g.lineTo(12,13);g.stroke();
-      for(let i=0;i<3;i++){g.beginPath();g.moveTo(-40,55+i*19);g.lineTo(0,75+i*16);g.lineTo(40,55+i*19);g.stroke();}
-    } else if(icon==='wings') {
-      g.beginPath();g.moveTo(0,-90);g.lineTo(0,100);g.stroke();
-      [-1,1].forEach(side=>{
-        g.beginPath();g.moveTo(0,-15);g.bezierCurveTo(side*65,-70,side*125,-80,side*145,-115);g.bezierCurveTo(side*140,-20,side*70,10,0,10);g.stroke();
-        for(let i=0;i<4;i++){g.beginPath();g.moveTo(side*(25+i*20),-18);g.lineTo(side*(60+i*18),-62-i*8);g.stroke();}
+/** Placas de bronce de Atenea, Hermes y Hefesto y estandartes carmesí de las salas. */
+export function addMythology(THREE, scene, canvasTex, compact, M) {
+  const panels = [{ name: 'ATENEA', caption: 'SABIDURÍA · SALA I', z: -5.5, side: 1, icon: 'owl' },
+    { name: 'HERMES', caption: 'INGENIO · SALA II', z: -17.5, side: -1, icon: 'wings' },
+    { name: 'HEFESTO', caption: 'CREACIÓN · SALA III', z: -29.5, side: 1, icon: 'hammer' }];
+  function drawIcon(g, icon, x, y) {
+    g.save(); g.translate(x, y); g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round';
+    const stroke = () => { g.strokeStyle = 'rgba(20,12,6,.7)'; g.save(); g.translate(2, 3); g.stroke(); g.restore(); g.strokeStyle = '#e2c387'; g.stroke(); };
+    if (icon === 'owl') {
+      g.beginPath(); g.ellipse(0, 20, 76, 105, 0, 0, Math.PI * 2); stroke();
+      [-1, 1].forEach(s => { g.beginPath(); g.arc(s * 37, -12, 33, 0, Math.PI * 2); stroke(); g.beginPath(); g.arc(s * 37, -12, 9, 0, Math.PI * 2); g.fillStyle = '#e2c387'; g.fill();
+        g.beginPath(); g.moveTo(s * 70, -36); g.lineTo(s * 85, -85); g.lineTo(s * 20, -46); stroke(); });
+      g.beginPath(); g.moveTo(-12, 13); g.lineTo(0, 39); g.lineTo(12, 13); stroke();
+      for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-40, 55 + i * 19); g.lineTo(0, 75 + i * 16); g.lineTo(40, 55 + i * 19); stroke(); }
+    } else if (icon === 'wings') {
+      g.beginPath(); g.moveTo(0, -90); g.lineTo(0, 100); stroke();
+      [-1, 1].forEach(s => {
+        g.beginPath(); g.moveTo(0, -15); g.bezierCurveTo(s * 65, -70, s * 125, -80, s * 145, -115); g.bezierCurveTo(s * 140, -20, s * 70, 10, 0, 10); stroke();
+        for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(s * (25 + i * 20), -18); g.lineTo(s * (60 + i * 18), -62 - i * 8); stroke(); }
+        g.beginPath(); g.moveTo(0, 75); g.bezierCurveTo(s * 70, 45, s * 60, 20, 0, 0); stroke();
       });
-      for(let side of [-1,1]){g.beginPath();g.moveTo(0,75);g.bezierCurveTo(side*70,45,side*60,20,0,0);g.stroke();}
     } else {
-      g.rotate(-.35);g.strokeRect(-23,-95,118,46);g.fillRect(11,-46,16,155);
-      g.rotate(.35);g.beginPath();g.moveTo(-90,95);g.lineTo(-67,54);g.lineTo(-48,74);g.lineTo(-23,25);g.stroke();
+      g.rotate(-.35); g.beginPath(); g.rect(-23, -95, 118, 46); stroke(); g.beginPath(); g.rect(11, -46, 16, 155); stroke();
+      g.rotate(.35); g.beginPath(); g.moveTo(-90, 95); g.lineTo(-67, 54); g.lineTo(-48, 74); g.lineTo(-23, 25); stroke();
     }
     g.restore();
   }
-  panels.forEach(p=>{
-    const texture=canvasTex(512,768,(g,w,h)=>{
-      g.fillStyle='#252c30';g.fillRect(0,0,w,h);g.strokeStyle='#a68b58';g.lineWidth=2;g.strokeRect(26,26,w-52,h-52);
-      g.textAlign='center';g.fillStyle='#cab38b';g.font='20px Georgia';g.fillText('ΜΟΥΣΕΙΟΝ',w/2,100);
-      drawIcon(g,p.icon,w/2,330);
-      g.font='42px Georgia';g.fillStyle='#e8dcca';g.fillText(p.name,w/2,595);g.font='15px monospace';g.fillStyle='#a99474';g.fillText(p.caption,w/2,643);
-      g.font='italic 19px Georgia';g.fillText('Donde las ideas cobran forma',w/2,700);
-    });
-    const backing=new THREE.Mesh(new THREE.BoxGeometry(2.05,3.08,.1),bronze);
-    const group=new THREE.Group();group.position.set(p.side*5.72,3.45,p.z);group.rotation.y=p.side<0?Math.PI/2:-Math.PI/2;group.add(backing);
-    const image=new THREE.Mesh(new THREE.PlaneGeometry(2,3),new THREE.MeshStandardMaterial({map:texture,roughness:.75}));image.position.z=.058;group.add(image);scene.add(group);
+  const plaques = [];
+  panels.forEach(p => {
+    const texture = canvasTex(512, 768, (g, w, h) => {
+      // Placa de bronce oscurecido con marco dorado y relieve en oro viejo.
+      const grd = g.createLinearGradient(0, 0, w, h); grd.addColorStop(0, '#3a2c20'); grd.addColorStop(.5, '#2a2019'); grd.addColorStop(1, '#3d2e22'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(${Math.random() > .7 ? '90,130,110' : '0,0,0'},${Math.random() * .08})`; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); }
+      g.strokeStyle = '#b98f55'; g.lineWidth = 3; g.strokeRect(24, 24, w - 48, h - 48); g.lineWidth = 1.5; g.strokeRect(36, 36, w - 72, h - 72);
+      g.textAlign = 'center'; g.fillStyle = '#cfae76'; g.font = '500 22px "Cinzel", Georgia, serif'; g.fillText('Μ Ο Υ Σ Ε Ι Ο Ν', w / 2, 100);
+      drawIcon(g, p.icon, w / 2, 330);
+      g.font = '600 50px "Cinzel", Georgia, serif'; g.fillStyle = '#ead8b6'; g.fillText(p.name, w / 2, 598);
+      g.font = '600 15px "Instrument Sans", sans-serif'; g.fillStyle = '#b89c70'; g.fillText(p.caption.split('').join(' '), w / 2, 642);
+      g.font = 'italic 500 24px "Cormorant Garamond", Georgia, serif'; g.fillStyle = '#c9b48f'; g.fillText('Donde las ideas cobran forma', w / 2, 694);
+    }, { text: true });
+    const group = new THREE.Group(); group.position.set(p.side * 5.86, 3.45, p.z); group.rotation.y = p.side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.2, 3.24, .08), M.marble); frame.castShadow = frame.receiveShadow = true; group.add(frame);
+    const backing = new THREE.Mesh(new THREE.BoxGeometry(2.05, 3.08, .06), M.bronze); backing.position.z = .05; group.add(backing);
+    const image = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), new THREE.MeshStandardMaterial({ map: texture, roughness: .45, metalness: .55 })); image.position.z = .081; group.add(image);
+    scene.add(group); plaques.push(group);
   });
-  // Estandartes carmesí con greca y omega, inspirados en la Grecia de God of War.
-  const bannerMap=canvasTex(256,768,(g,w,h)=>{
-    g.fillStyle='#5e1418';g.fillRect(0,0,w,h);
-    for(let x=0;x<w;x+=3){g.fillStyle=x%9?'rgba(0,0,0,.04)':'rgba(247,191,122,.05)';g.fillRect(x,0,1,h);}
-    g.strokeStyle='#b48a54';g.lineWidth=3;g.strokeRect(15,18,w-30,h-36);g.strokeRect(24,27,w-48,h-54);
-    g.fillStyle='#c4a06c';g.textAlign='center';g.font='170px Georgia';g.fillText('Ω',w/2,330);
-    g.font='18px Georgia';g.fillText('ΟΛΥΜΠΟΣ',w/2,420);
-    g.beginPath();g.moveTo(w/2,470);g.lineTo(w/2,600);g.stroke();
-  });
-  const banners=[];
-  for(const z of [-7.4,-19.4,-31.4])for(const side of [-1,1]){
-    const geo=new THREE.PlaneGeometry(1.05,3.25,8,20),p=geo.attributes.position;
-    for(let i=0;i<p.count;i++){const y=p.getY(i);if(y< -1.45)p.setY(i,y+Math.abs(p.getX(i))*.38);p.setZ(i,Math.sin(p.getX(i)*10)*.045);}
-    geo.computeVertexNormals();const banner=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:bannerMap,roughness:.98,side:THREE.DoubleSide}));
-    banner.position.set(side*5.5,5.15,z);banner.rotation.y=side<0?Math.PI/2:-Math.PI/2;banner.receiveShadow=true;scene.add(banner);banners.push({banner,original:new Float32Array(p.array),phase:z+side});
-    const rod=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,1.25,12),bronze);rod.rotation.x=Math.PI/2;rod.position.set(side*5.5,6.78,z);scene.add(rod);
+  // Estandartes carmesí con greca dorada y corona de laurel.
+  const bannerMap = canvasTex(256, 768, (g, w, h) => {
+    g.fillStyle = '#5a1216'; g.fillRect(0, 0, w, h);
+    for (let x = 0; x < w; x += 2) { g.fillStyle = x % 6 ? 'rgba(0,0,0,.05)' : 'rgba(255,190,140,.04)'; g.fillRect(x, 0, 1, h); }
+    for (let y = 0; y < h; y += 3) { g.fillStyle = 'rgba(0,0,0,.035)'; g.fillRect(0, y, w, 1); }
+    g.strokeStyle = '#c29a5c'; g.lineWidth = 3;
+    const band = (y) => { for (let x = 22; x < w - 30; x += 26) { g.beginPath(); g.moveTo(x, y + 18); g.lineTo(x + 22, y + 18); g.lineTo(x + 22, y); g.lineTo(x + 6, y); g.lineTo(x + 6, y + 11); g.lineTo(x + 15, y + 11); g.stroke(); } };
+    band(40); band(h - 120);
+    g.strokeRect(14, 14, w - 28, h - 28);
+    g.fillStyle = '#c9a466';
+    for (let i = 0; i < 2; i++) for (let k = 0; k < 9; k++) { const a = Math.PI * (.62 + k * .095), s = i ? -1 : 1; g.save(); g.translate(w / 2 + s * Math.cos(a) * 70, 300 - Math.sin(a) * 70); g.rotate(s * (a + .4)); g.beginPath(); g.ellipse(0, 0, 6, 15, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+    g.beginPath(); g.arc(w / 2, 300, 22, 0, Math.PI * 2); g.lineWidth = 3; g.stroke();
+    g.font = '600 26px "Cinzel", Georgia, serif'; g.textAlign = 'center'; g.fillText('ΜΟΥΣΕΙΟΝ', w / 2, 440);
+  }, { text: true });
+  const banners = [];
+  const bannerMat = new THREE.MeshStandardMaterial({ map: bannerMap, roughness: .95, side: THREE.DoubleSide });
+  // Un estandarte por sala, en el muro opuesto al rótulo grabado.
+  for (const [z, side] of [[-7.4, 1], [-19.4, -1], [-31.4, 1]]) {
+    const geo = new THREE.PlaneGeometry(1.05, 3.25, 8, 20), p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < -1.45) p.setY(i, y + Math.abs(p.getX(i)) * .38); p.setZ(i, Math.sin(p.getX(i) * 10) * .045); }
+    geo.computeVertexNormals(); const banner = new THREE.Mesh(geo, bannerMat);
+    banner.position.set(side * 5.6, 4.6, z); banner.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2; banner.castShadow = !compact; banner.receiveShadow = true; scene.add(banner); banners.push({ banner, original: new Float32Array(p.array), phase: z + side });
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, 1.25, 12), M.gilt); rod.rotation.x = Math.PI / 2; rod.position.set(side * 5.6, 6.23, z); scene.add(rod);
   }
-  // Dos pebeteros custodian el pórtico. La luz fluctúa con suavidad.
-  const flames=[];
-  const fireMap=canvasTex(64,128,(g,w,h)=>{
-    g.translate(w/2,h*.55);g.scale(1,2);
-    const gradient=g.createRadialGradient(0,0,1,0,0,w*.48);gradient.addColorStop(0,'rgba(255,244,193,1)');gradient.addColorStop(.2,'rgba(255,177,72,.8)');gradient.addColorStop(.65,'rgba(245,88,23,.25)');gradient.addColorStop(1,'rgba(240,80,20,0)');g.fillStyle=gradient;g.fillRect(-w/2,-h/2,w,h);
-  });
-  [-1,1].forEach(side=>{
-    const x=side*4.5,z=10;
-    const base=new THREE.Mesh(new THREE.CylinderGeometry(.3,.44,.18,24),stone);base.position.set(x,.09,z);scene.add(base);
-    const stem=new THREE.Mesh(new THREE.CylinderGeometry(.095,.18,1.2,20),bronze);stem.position.set(x,.75,z);scene.add(stem);
-    const bowl=new THREE.Mesh(new THREE.SphereGeometry(.38,24,12,0,Math.PI*2,Math.PI/2,Math.PI/2),bronze);bowl.position.set(x,1.4,z);scene.add(bowl);
-    const fire=new THREE.Group();fire.position.set(x,1.66,z);scene.add(fire);
-    for(let i=0;i<3;i++){const plane=new THREE.Mesh(new THREE.PlaneGeometry(.6,.85),new THREE.MeshBasicMaterial({map:fireMap,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,toneMapped:false}));plane.rotation.y=i*Math.PI/3;fire.add(plane);}
-    const light=new THREE.PointLight('#ffb365',4,6,2);light.position.set(x,1.85,z);scene.add(light);flames.push({fire,light,phase:side*2});
-  });
-  return {update(t,reduce){
-    if(!reduce)banners.forEach(({banner,original,phase})=>{const p=banner.geometry.attributes.position;for(let i=0;i<p.count;i++){const y=original[i*3+1],influence=(1.625-y)/3.25;p.setZ(i,original[i*3+2]+Math.sin(t*1.1+y*2+phase)*.025*influence);}p.needsUpdate=true;});
-    flames.forEach(({fire,light,phase})=>{const pulse=reduce?1:1+Math.sin(t*2.3+phase)*.07+Math.sin(t*4.1+phase)*.03;fire.scale.set(1,pulse,1);light.intensity=3.8*pulse;});}};
+  return {
+    update(t, reduce) {
+      if (!reduce) banners.forEach(({ banner, original, phase }) => { const p = banner.geometry.attributes.position; for (let i = 0; i < p.count; i++) { const y = original[i * 3 + 1], influence = (1.625 - y) / 3.25; p.setZ(i, original[i * 3 + 2] + Math.sin(t * 1.1 + y * 2 + phase) * .025 * influence); } p.needsUpdate = true; });
+    }
+  };
 }

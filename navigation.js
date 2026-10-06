@@ -10,7 +10,9 @@ export function moveVisitor(position, input, yaw, dt, speed = 3.8) {
   for(const [z,halfWidth] of [[3.8,1.94],[-11,2.94],[-23,2.94]]) {
     if((position.z-z)*(next.z-z)<=0 && Math.abs(next.x)>halfWidth)next.z=position.z;
   }
-  const obstacles=[[0,-5.2,.92],[0,-17.2,.92],[0,-29.2,.92],[-4,-4,.72],[4,-7,.72],[-4,-16,.72],[4,-19,.72],[-4,-28,.72],[4,-31,.72]];
+  // Urnas, Atenea, cerámica y braseros: [x, z, radio].
+  const obstacles=[[0,-5.2,.92],[0,-17.2,.92],[0,-29.2,.92],[-2.8,-7.9,1.15],[4.25,-3.5,.72],[-4.3,-3.2,.72],[-4.25,-14.6,.72],[4.25,-19.4,.72],[-4.25,-26.8,.72],[4.25,-27.2,.72],
+    [4.25,-9.4,.75],[-4.25,-21.4,.75],[4.25,-33.4,.75],[-6.9,9.4,.9],[6.9,9.4,.9],[0,-40,1.0]];
   if(next.y<3)for(const [x,z,r] of obstacles){const dx=next.x-x,dz=next.z-z,d=Math.hypot(dx,dz);if(d<r){next.x=x+(d>1e-6?dx/d:1)*r;next.z=z+(dz/(d||1))*r;}}
   return next;
 }
