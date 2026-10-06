@@ -40,9 +40,9 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   const floorGeo = new THREE.PlaneGeometry(12, HALL.start - HALL.end);
   const floor = new THREE.Mesh(floorGeo, M.withRepeat(M.floor, 12 / 4.8, (HALL.start - HALL.end) / 4.8));
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (HALL.start + HALL.end) / 2); floor.receiveShadow = true; scene.add(floor);
-  const plaza = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), M.withRepeat(M.floor, 90 / 7, 60 / 7));
+  const plaza = new THREE.Mesh(new THREE.PlaneGeometry(42.4, 43.4), M.withRepeat(M.floor, 42.4 / 7, 43.4 / 7));
   plaza.material = plaza.material.clone(); plaza.material.color.set('#8d8475'); plaza.material.roughness = 1.25;
-  plaza.rotation.x = -Math.PI / 2; plaza.position.set(0, -.6, 38); plaza.receiveShadow = true; scene.add(plaza);
+  plaza.rotation.x = -Math.PI / 2; plaza.position.set(0, -.6, 28.9); plaza.receiveShadow = true; scene.add(plaza);
   // Guía de bronce embutida en el pavimento hasta la última sala.
   [-2.4, 2.4].forEach(x => box(.05, .012, 49.4, x, .002, -21, M.gilt));
 
@@ -116,7 +116,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   box(F.half * 2, .6, F.front - 4.05, 0, -.3, (F.front + 4.05) / 2, M.marbleWarm);
   for (let i = 1; i <= 2; i++) box(F.half * 2 + i * .9, .2, .45, 0, -.1 - i * .2, F.front + i * .45 - .225, M.marbleWarm);
   // Muro de fachada con el vano de la puerta.
-  [-1, 1].forEach(s => box(F.half - 2.95, F.top, .65, s * (2.95 + (F.half - 2.95) / 2 - .4), F.top / 2, F.wallZ, M.wall));
+  [-1, 1].forEach(s => box(F.half - 3.02, F.top, .65, s * (2.62 + (F.half - 3.02) / 2), F.top / 2, F.wallZ, M.wall));
   box(5.9, F.top - 5.95, .65, 0, (F.top + 5.95) / 2, F.wallZ, M.wall);
   [-1, 1].forEach(s => box(F.half - 3.45, 1.15, .12, s * (2.95 + (F.half - 3.45) / 2), .575, F.wallZ + .37, M.darkStone));
   [-1, 1].forEach(s => box(.7, F.top, .9, s * (F.half - .75), F.top / 2, F.wallZ + .1, M.marble)); // antas
@@ -158,23 +158,38 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   [[0, pedBase + pedH + .1, 1.05], [-F.half - .1, pedBase + .1, .7], [F.half + .1, pedBase + .1, .7]].forEach(([x, y, s]) => {
     const p = new THREE.Mesh(palmette(s), M.marble); p.position.set(x, y, F.front + .15); p.castShadow = true; statics.add(p);
   });
-  // Escudo de bronce con corona de olivo en el tímpano, en honor a Atenea.
-  // Casquete esférico poco profundo: radio de borde .72 m.
-  const shieldY = pedBase + .95, R = 2.7, shieldBack = 6.72 - R * Math.cos(.27);
-  const shield = new THREE.Mesh(new THREE.SphereGeometry(R, compact ? 40 : 72, 8, 0, Math.PI * 2, 0, .27), M.bronze);
-  shield.rotation.x = Math.PI / 2; shield.position.set(0, shieldY, shieldBack); shield.castShadow = true; statics.add(shield);
-  [.6, .4, .16].forEach(r => { const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .024, 8, 64), M.gilt); ring.position.set(0, shieldY, shieldBack + Math.sqrt(R * R - r * r) + .005); statics.add(ring); });
-  for (let i = 0; i < 24; i++) {
-    const a = Math.PI * (-.12 + 1.24 * i / 23), leaf = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), M.gilt);
-    leaf.scale.set(.5, 1.5, .3); leaf.position.set(Math.cos(a) * .86, shieldY + Math.sin(a) * .86, 6.76); leaf.rotation.z = a + (i % 2 ? .65 : -.65); statics.add(leaf);
-  }
-  // Inscripción tallada en el arquitrabe: el nombre del autor, no un título del museo.
+  // Medallón del frontón: disco de bronce oscuro, greca dorada y una gran omega en relieve.
+  const medY = pedBase + 1.0, medZ = 6.72, medR = .9;
+  const medBronze = M.bronzeVariant(23, '#6a4a30', 2);
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(medR, medR + .02, .09, compact ? 64 : 128), medBronze);
+  disc.rotation.x = Math.PI / 2; disc.position.set(0, medY, medZ + .045); disc.castShadow = true; statics.add(disc);
+  const keyTex = canvasTex(2048, 128, (g, w, h) => {
+    g.fillStyle = '#2a1a0e'; g.fillRect(0, 0, w, h); g.strokeStyle = '#ffffff'; g.lineWidth = 13; g.lineJoin = 'miter';
+    for (let x = 0; x < w; x += 128) { g.beginPath(); g.moveTo(x, 104); g.lineTo(x + 112, 104); g.lineTo(x + 112, 24); g.lineTo(x + 32, 24); g.lineTo(x + 32, 76); g.lineTo(x + 84, 76); g.lineTo(x + 84, 50); g.stroke(); }
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, 8); g.fillRect(0, h - 8, w, 8);
+  });
+  // La greca se enrolla en el anillo: la coordenada angular recorre la textura.
+  const ringGeo = new THREE.RingGeometry(medR * .74, medR * .95, compact ? 96 : 192, 1);
+  { const p = ringGeo.attributes.position, uv = ringGeo.attributes.uv;
+    for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getY(i), p.getX(i)), r = Math.hypot(p.getX(i), p.getY(i)); uv.setXY(i, (a / (Math.PI * 2) + .5) * 12, (r - medR * .74) / (medR * .21)); } }
+  const keyRing = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ color: '#d9ac5f', map: keyTex, metalness: 1, roughness: .32, emissive: '#5a3a12', emissiveMap: keyTex, emissiveIntensity: .45 }));
+  keyRing.position.set(0, medY, medZ + .092); scene.add(keyRing);
+  [medR * .96, medR * .73].forEach(r => { const t = new THREE.Mesh(new THREE.TorusGeometry(r, .022, 10, 128), M.gilt); t.position.set(0, medY, medZ + .095); statics.add(t); });
+  const omega = new THREE.Shape();
+  omega.moveTo(-.4101, -.3601); omega.absarc(0, .05, .58, Math.PI * 1.25, Math.PI * 1.75, true);
+  omega.lineTo(.68, -.36); omega.lineTo(.68, -.52); omega.lineTo(.2, -.52); omega.lineTo(.2, -.29);
+  omega.lineTo(.2828, -.2328); omega.absarc(0, .05, .4, -Math.PI / 4, Math.PI * 1.25, false);
+  omega.lineTo(-.2, -.29); omega.lineTo(-.2, -.52); omega.lineTo(-.68, -.52); omega.lineTo(-.68, -.36); omega.closePath();
+  const omegaGold = new THREE.MeshStandardMaterial({ color: '#e0b264', metalness: 1, roughness: .26, emissive: '#6a4312', emissiveIntensity: .55, envMapIntensity: 1.5 });
+  const omegaMesh = new THREE.Mesh(new THREE.ExtrudeGeometry(omega, { depth: .07, bevelEnabled: true, bevelThickness: .02, bevelSize: .016, bevelSegments: 3, curveSegments: 48 }), omegaGold);
+  omegaMesh.scale.setScalar(.88); omegaMesh.position.set(0, medY - .02, medZ + .09); omegaMesh.castShadow = true; scene.add(omegaMesh);
+  // Inscripción tallada en el arquitrabe: el nombre del templo en letras griegas.
   const inscription = canvasTex(2048, 128, (g, w, h) => {
-    g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.font = '600 76px "Cinzel", "Trajan Pro", Georgia, serif';
-    const text = 'JOSÉ · MIGUEL · MIRALLES · GANDIA';
-    if (g.letterSpacing !== undefined) g.letterSpacing = '14px';
-    g.fillStyle = 'rgba(255,240,214,.55)'; g.fillText(text, w / 2, 90);        // arista iluminada
-    g.fillStyle = 'rgba(38,28,18,.92)'; g.fillText(text, w / 2, 87);           // fondo del surco
+    g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.font = '600 92px "EB Garamond", "GFS Didot", Georgia, serif';
+    const text = 'ΠΑΡΘΕΝΩΝ';
+    if (g.letterSpacing !== undefined) g.letterSpacing = '58px';
+    g.fillStyle = 'rgba(255,240,214,.55)'; g.fillText(text, w / 2 + 29, 98);        // arista iluminada
+    g.fillStyle = 'rgba(38,28,18,.92)'; g.fillText(text, w / 2 + 29, 95);           // fondo del surco
   }, { text: true });
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(13, .82), new THREE.MeshStandardMaterial({ map: inscription, transparent: true, roughness: .9, depthWrite: false }));
   sign.position.set(0, F.top + .4, F.front - .035); scene.add(sign);
@@ -235,7 +250,8 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
 
   /* ---------- Portadas y puertas de bronce ---------- */
   const doors = [];
-  const leafMat = M.bronzeVariant(17, '#a88d70', .66);
+  // Bronce bruñido sin pátina: hojas limpias y cálidas.
+  const leafMat = M.bronzeVariant(17, '#b48a5e', 2);
   function portal(z, width, height, front = false) {
     const half = width / 2;
     // Marco de tres fajas como un arquitrabe jónico, con cornisa sobre el dintel.
@@ -259,6 +275,8 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
       const pivot = new THREE.Group(); pivot.userData.movingDoor = true; pivot.position.set(side * half, 0, z); scene.add(pivot);
       const center = -side * half / 2;
       box(half - .02, height, .2, center, height / 2, 0, leafMat, pivot);
+      // Tapajuntas: la hoja derecha cubre la rendija central.
+      if (side > 0) box(.07, height - .04, .05, -half + .015, height / 2, .13, M.gilt, pivot);
       [.25, .75].forEach(f => {
         const pw = half - .4, ph = height * .38, y = height * f;
         box(pw + .1, ph + .1, .05, center, y, .12, M.gilt, pivot);
@@ -288,7 +306,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   portal(F.wallZ, 4.6, 5.8, true); portal(-11, 6.6, 6.45); portal(-23, 6.6, 6.45);
 
   /* ---------- Cielo crepuscular y montañas lejanas ---------- */
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(75, 32, 16), new THREE.ShaderMaterial({
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(205, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
     vertexShader: 'varying vec3 vP; void main(){ vP=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
     fragmentShader: `varying vec3 vP;
@@ -312,14 +330,14 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
       g.lineTo(w, h); g.fill();
     });
   });
-  const ridge = new THREE.Mesh(new THREE.CylinderGeometry(68, 68, 16, 64, 1, true), new THREE.MeshBasicMaterial({ map: hills, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
-  ridge.position.y = 4; ridge.renderOrder = -9; scene.add(ridge);
+  const ridge = new THREE.Mesh(new THREE.CylinderGeometry(200, 200, 46, 64, 1, true), new THREE.MeshBasicMaterial({ map: hills, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  ridge.position.y = 14; ridge.renderOrder = -9; scene.add(ridge);
 
   /* ---------- Luces ---------- */
   const sun = new THREE.DirectionalLight('#ffd7a8', 3.2);
-  sun.position.set(SUN_OFFSET[0], SUN_OFFSET[1], SUN_OFFSET[2] - 14); sun.target.position.set(0, 0, -14); scene.add(sun, sun.target);
+  sun.position.set(SUN_OFFSET[0] * 2, SUN_OFFSET[1] * 2, SUN_OFFSET[2] * 2 + 2); sun.target.position.set(0, 0, 2); scene.add(sun, sun.target);
   sun.castShadow = true; const map = compact ? 1024 : 2048; sun.shadow.mapSize.set(map, map);
-  Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 30, bottom: -30, near: 1, far: 70 });
+  Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 58, bottom: -58, near: 1, far: 140 });
   sun.shadow.normalBias = .03; sun.shadow.bias = -.0004; sun.shadow.radius = 3;
   // Luz de cielo fría para que la sombra nunca sea negra; tono de piedra en el rebote.
   scene.add(new THREE.HemisphereLight('#a9bccd', '#5a4636', .32));
@@ -340,7 +358,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   return {
     sun, skylights, box, column, contactShadow,
     update(camera, dt, reduce, t) {
-      sky.position.copy(camera.position); ridge.position.set(camera.position.x, 4, camera.position.z);
+      sky.position.copy(camera.position); ridge.position.set(camera.position.x, 14, camera.position.z);
       shaftMat.uniforms.uTime.value = t || 0;
       doors.forEach(d => {
         const progress = smootherStep((d.z + 14 - camera.position.z) / 11);

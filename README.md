@@ -1,6 +1,6 @@
 # Portafolio de José Miguel Miralles Gandia
 
-Un museo digital de inspiración griega para explorar proyectos web y aplicaciones. El recorrido comienza ante un templo dórico al anochecer y atraviesa sus salas con la rueda del ratón o deslizando hacia arriba en el móvil.
+Un museo digital de inspiración griega, ambientado en la saga griega de God of War, para explorar proyectos web y aplicaciones. El recorrido empieza en el ágora de Atenas, ante un muro con mi presentación grabada en piedra. Después cruza el Partenón y sus tres salas, cada una presidida por un dios. Se avanza con la rueda del ratón o deslizando hacia arriba en el móvil.
 
 ## Qué hace cada tecnología
 
@@ -9,7 +9,11 @@ Un museo digital de inspiración griega para explorar proyectos web y aplicacion
 - **JavaScript y Three.js** (`museum.js`): escena 3D, cámara, recorrido e interacción. Three.js dibuja la escena utilizando WebGL.
 - **Arquitectura** (`greek-temple.js`): pórtico dórico hexástilo sobre crepidoma, columnas de veinte estrías con éntasis, anillos, equino y ábaco, entablamento con triglifos, gotas y mútulos, frontón con escudo y corona de olivo, acroteras, muros de sillería con zócalo de ortostatos, techo de casetones pintados con estrellas doradas, lucernarios con haces de luz, puertas de bronce y cielo crepuscular.
 - **Materiales** (`materials.js`): mármol veteado, sillería, losas y bronce con pátina, generados en canvas con ruido periódico (color, rugosidad y relieve) y proyectados en metros reales para que no se estiren.
-- **Atenea** (`athena.js`, `assets/athena/`): escaneo 3D de una Atenea clásica de mármol, con mapas de normales, oclusión y rugosidad, una corona de olivo de bronce dorado, un broche en el hombro, un pedestal y un foco propio con sombra. Procedencia y licencia en `assets/athena/README.md`.
+- **Dioses** (`gods.js`): una escultura por sala, con pedestal, inscripción griega, focos propios y una ficha interactiva (quiénes eran, su papel en God of War y por qué están aquí).
+  - Sala I: Atenea de la sabiduría, modelada para el museo a partir del retrato de referencia (`assets/atenea-sabiduria/`, scripts en `tools/esculturas/`), y Atenea guerrera, escaneada (`assets/athena/`).
+  - Sala II: Hermes, escaneado (`assets/hermes/`).
+  - Sala III: Hefesto, modelado (`assets/hefesto/`).
+- **Ágora y Atenas** (`athens.js`): plaza con mosaico, cipreses, propileo y el muro grabado con mi presentación (interactivo). Alrededor, Atenas sobre colinas con casas, templos menores, cipreses y luces de ventanas al anochecer.
 - **Fuego** (`fire.js`): braseros trípode de bronce, llamas con ruido animado en el sombreador (cinco capas con ritmos propios), brasas, humo y luz que titila de forma irregular.
 - **Cerámica** (`pottery.js`): ánfora de cuello, ánfora de vientre, crátera de cáliz e hidria, con figuras negras o rojas, grecas, lengüetas, rayos y desgaste pintados en canvas.
 - **Cámara libre en PC** (`free-camera.js`, `navigation.js`): WASD, mirada al arrastrar el ratón, Q/E para altura, Mayús para correr y Esc para regresar al recorrido. Incluye límites de fachada, puertas y urnas.
@@ -17,7 +21,7 @@ Un museo digital de inspiración griega para explorar proyectos web y aplicacion
 - **Renderizado** (`cinematic.js`): oclusión ambiental en pantalla y desenfoque de cámara calculados con la profundidad. Los textos y botones permanecen nítidos.
 - **Movimiento** (`motion.js`): amortiguación del avance y curvas de aceleración, independientes de la tasa de fotogramas.
 
-Three.js 0.169.0 se carga desde jsDelivr y las tipografías desde Google Fonts. Se necesita conexión a Internet para estas dependencias. Las geometrías y texturas del edificio se generan en la página; el único recurso descargado es la escultura (unos 2,5 MB en ordenador y 1,6 MB en móvil).
+Three.js 0.169.0 se carga desde jsDelivr y las tipografías desde Google Fonts. Se necesita conexión a Internet para estas dependencias. Las geometrías y texturas del edificio y de la ciudad se generan en la página. Solo se descargan las esculturas: unos 5,3 MB en ordenador y 3,2 MB en móvil, con modelos comprimidos con Draco.
 
 ## Ejecutar en local
 
@@ -31,8 +35,10 @@ Abre `http://localhost:8000`. Usa un servidor HTTP para cargar los módulos de J
 
 ## Recorrido
 
-- Entrada exterior con pórtico dórico, escalinata, braseros encendidos y el nombre del autor grabado en el arquitrabe.
-- Sala I presidida por la escultura de Atenea; cerámica ática distinta en cada sala, estandartes carmesí y contraste entre fuego cálido y luz fría del cielo, con la atmósfera y la escala del God of War griego como referencia.
+- Ágora con el muro grabado: nombre, estudios (1.º de DAM en el IES Dr. Lluís Simarro) y lo que busco. Se puede abrir como ficha con «Sobre mí».
+- Partenón con ΠΑΡΘΕΝΩΝ grabado en el arquitrabe, medallón con una omega dorada en el frontón, puertas de bronce y braseros encendidos.
+- Un dios por sala (Atenea, Hermes y Hefesto), cerámica ática distinta en cada sala, estandartes carmesí y contraste entre fuego cálido y luz fría del cielo, con la atmósfera y la escala del God of War griego como referencia.
+- Rótulos de sala legibles que permanecen durante la llegada y el comienzo de cada sala.
 - Puertas que se abren al acercarse y se cierran al retroceder.
 - Tres salas con urnas, proyectos y fichas ampliadas.
 - Recorrido continuo sin pausas rígidas entre salas, amortiguación conectada al bucle de cámara y curvas monótonas que conservan la velocidad.
@@ -52,7 +58,7 @@ La dirección de diseño toma como referencia los recorridos inmersivos de CSS D
 ## Comprobación
 
 ```bash
-for f in museum.js greek-temple.js materials.js fire.js pottery.js athena.js mythology.js cinematic.js; do node --check $f; done
+for f in *.js; do node --check $f; done
 npm test
 git diff --check
 ```

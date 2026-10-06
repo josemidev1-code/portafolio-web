@@ -1,8 +1,8 @@
 /** Placas de bronce de Atenea, Hermes y Hefesto y estandartes carmesí de las salas. */
 export function addMythology(THREE, scene, canvasTex, compact, M) {
-  const panels = [{ name: 'ATENEA', caption: 'SABIDURÍA · SALA I', z: -5.5, side: 1, icon: 'owl' },
-    { name: 'HERMES', caption: 'INGENIO · SALA II', z: -17.5, side: -1, icon: 'wings' },
-    { name: 'HEFESTO', caption: 'CREACIÓN · SALA III', z: -29.5, side: 1, icon: 'hammer' }];
+  const panels = [{ name: 'ATENEA', caption: 'SABIDURÍA · SALA I', z: -4.9, side: -1, icon: 'owl' },
+    { name: 'HERMES', caption: 'INGENIO · SALA II', z: -16.9, side: -1, icon: 'wings' },
+    { name: 'HEFESTO', caption: 'CREACIÓN · SALA III', z: -28.9, side: -1, icon: 'hammer' }];
   function drawIcon(g, icon, x, y) {
     g.save(); g.translate(x, y); g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round';
     const stroke = () => { g.strokeStyle = 'rgba(20,12,6,.7)'; g.save(); g.translate(2, 3); g.stroke(); g.restore(); g.strokeStyle = '#e2c387'; g.stroke(); };
@@ -60,8 +60,8 @@ export function addMythology(THREE, scene, canvasTex, compact, M) {
   }, { text: true });
   const banners = [];
   const bannerMat = new THREE.MeshStandardMaterial({ map: bannerMap, roughness: .95, side: THREE.DoubleSide });
-  // Un estandarte por sala, en el muro opuesto al rótulo grabado.
-  for (const [z, side] of [[-7.4, 1], [-19.4, -1], [-31.4, 1]]) {
+  // Detrás de cada dios cuelga un estandarte, como un telón.
+  for (const [z, side] of [[-7.9, -1], [-19.9, -1], [-31.9, -1]]) {
     const geo = new THREE.PlaneGeometry(1.05, 3.25, 8, 20), p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < -1.45) p.setY(i, y + Math.abs(p.getX(i)) * .38); p.setZ(i, Math.sin(p.getX(i) * 10) * .045); }
     geo.computeVertexNormals(); const banner = new THREE.Mesh(geo, bannerMat);

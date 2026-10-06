@@ -9,7 +9,8 @@ import { createGreekMuseum } from './greek-temple.js';
 import { createMaterials } from './materials.js';
 import { createFires } from './fire.js';
 import { createPottery } from './pottery.js';
-import { createAthena } from './athena.js';
+import { createGods, GOD_INFO } from './gods.js';
+import { createAthens, WALL } from './athens.js';
 
 const root = document.documentElement;
 let savedMotion=null;try{savedMotion=localStorage.getItem('museo-motion');}catch{}
@@ -47,13 +48,28 @@ const FICHAS = [
   }
 ];
 
+/* Inscripción del ágora: la misma información, accesible y legible en cualquier pantalla. */
+const ABOUT = {
+  inv: 'Ágora · Inscripción del autor', title: 'José Miguel Miralles Gandia', accent: '#d8b46a',
+  text: ['Estudiante de 1.º de DAM (Desarrollo de Aplicaciones Multiplataforma) en el IES Dr. Lluís Simarro.',
+    'Busco un lugar donde trabajar y seguir creciendo. Hago páginas web y estoy aprendiendo a crear automatizaciones con IA para empresas.'],
+  listTitle: 'En este museo', list: ['Sala I · JOSEMI-OS, presidida por Atenea', 'Sala II · Asistente de gimnasio, presidida por Hermes', 'Sala III · Próximo proyecto, presidida por Hefesto'],
+  links: [['Escríbeme', 'mailto:jmenterprice73@gmail.com'], ['GitHub ↗', 'https://github.com/josemidev1-code'], ['LinkedIn ↗', 'https://www.linkedin.com/in/jose-miguel-miralles-gandia-74347b43a/']]
+};
+const ABOUT_HIT = { about: true };
+
 /* ---------- Recorrido: paradas de cámara ---------- */
 // Cada parada: posición de cámara, punto al que mira y cuánto scroll se queda quieta.
+// Punto de lectura del muro grabado: de frente, a unos ocho metros, con el muro a la derecha del encuadre.
+const wallRight = [Math.cos(WALL.rot), 0, -Math.sin(WALL.rot)], wallFace = [Math.sin(WALL.rot), 0, Math.cos(WALL.rot)];
+const WALL_C = [WALL.x, 1.95, WALL.z];
+const along = (p, d, k) => p.map((v, i) => v + d[i] * k);
 const STOPS = [
+  { name: 'Ágora',    pos: along(along(WALL_C, wallFace, 9.6), wallRight, -1.6), look: along(WALL_C, wallRight, -1.9), hold: .35 },
   { name: 'Entrada',  pos: [0, 2.7, 24],     look: [0, 4.7, 3.8],   hold: .25 },
   { name: 'Sala I',   pos: [.9, 1.55, -1.2], look: [0, 1.45, -5.2], hold: 1.1 },
   { name: 'Pasillo',  pos: [-.4, 1.7, -10], look: [0, 1.5, -18],  hold: 0, pass: true },
-  { name: 'Sala II',  pos: [-.9, 1.55, -13.2], look: [0, 1.45, -17.2], hold: 1.1 },
+  { name: 'Sala II',  pos: [.9, 1.55, -13.2], look: [0, 1.45, -17.2], hold: 1.1 },
   { name: 'Pasillo',  pos: [.4, 1.7, -22],  look: [0, 1.5, -30],  hold: 0, pass: true },
   { name: 'Sala III', pos: [.9, 1.55, -25.2], look: [0, 1.45, -29.2], hold: 1.1 },
   { name: 'Pasillo',  pos: [0, 1.8, -34],    look: [0, 3.2, -44],  hold: 0, pass: true },
@@ -65,12 +81,14 @@ function frameRoute() {
   small = innerWidth < 720;
   STOPS.forEach((s,i) => {
     s.pos = [...originalStops[i].pos]; s.look = [...originalStops[i].look];
-    if (small && !s.pass && s.name !== 'Entrada' && s.name !== 'Salida') {
-      s.pos = [0, 2.35, s.look[2] + 5.4]; s.look = [0, .55, s.look[2]];
-    }
+    // En vertical cada sala gira un poco hacia su dios para que urna y escultura compartan encuadre.
+    if (small && s.name.startsWith('Sala')) { const z = s.look[2]; s.pos = [.35, 2.7, z + 7.1]; s.look = [-.95, .15, z - 1]; }
   });
-  // En vertical la Sala I gira un poco hacia Atenea para que urna y escultura compartan encuadre.
-  if (small) { STOPS[1].pos = [.35, 2.7, 1.9]; STOPS[1].look = [-.95, .15, -6.2]; STOPS[0].pos = [0, 3.6, 41]; STOPS[0].look = [0, 5.4, 3.8]; }
+  if (small) {
+    // En vertical el muro se aleja y sube en el encuadre para dejar sitio a la portada.
+    STOPS[0].pos = along(along(WALL_C, wallFace, 14), [0, 1, 0], .6); STOPS[0].look = along(WALL_C, [0, 1, 0], -2.4);
+    STOPS[1].pos = [0, 3.6, 41]; STOPS[1].look = [0, 5.4, 3.8];
+  }
 }
 frameRoute();
 const MAIN = STOPS.map((s, i) => s.pass ? -1 : i).filter(i => i >= 0); // índices de paradas reales
@@ -78,7 +96,7 @@ const MAIN = STOPS.map((s, i) => s.pass ? -1 : i).filter(i => i >= 0); // índic
 const segs = []; let total = 0;
 STOPS.forEach((s, i) => {
   if (s.hold) { segs.push({ type: 'hold', i, a: total, b: total + s.hold }); total += s.hold; }
-  if (i < STOPS.length - 1) { const len = i === 0 ? 3.2 : (STOPS[i + 1].pass || s.pass ? 1.05 : 1.4); segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
+  if (i < STOPS.length - 1) { const len = i === 0 ? 1.8 : i === 1 ? 3.2 : (STOPS[i + 1].pass || s.pass ? 1.05 : 1.4); segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
 });
 const track = document.getElementById('track');
 const VH_PER_UNIT = small ? 82 : 72;
@@ -127,7 +145,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#141518');
 // Niebla cálida y lejana: da aire a la nave sin ocultar las salas.
-scene.fog = new THREE.Fog('#2a2620', 30, 78);
+scene.fog = new THREE.Fog('#2b2621', 45, 215);
 // Reflejos suaves en bronce, cristal y piedra, sin descargar un HDR pesado.
 const pmrem = new THREE.PMREMGenerator(renderer);
 const reflectionRoom = new RoomEnvironment();
@@ -135,7 +153,7 @@ const reflectionTarget = pmrem.fromScene(reflectionRoom, .025);
 scene.environment = reflectionTarget.texture;
 scene.environmentIntensity = .14;
 reflectionRoom.dispose(); pmrem.dispose();
-const camera = new THREE.PerspectiveCamera(small ? 62 : 50, innerWidth / innerHeight, .1, 90);
+const camera = new THREE.PerspectiveCamera(small ? 62 : 50, innerWidth / innerHeight, .1, 240);
 camera.position.set(...STOPS[0].pos);
 
 
@@ -154,9 +172,10 @@ function canvasTex(w, h, draw, opts = {}) {
 const M = createMaterials(THREE, { compact: small });
 const architecture = createGreekMuseum(THREE, scene, canvasTex, small, M);
 const mythology = addMythology(THREE, scene, canvasTex, small, M);
+const athens = createAthens(THREE, scene, M, { compact: small, canvasTex, contactShadow: architecture.contactShadow });
 const fires = createFires(THREE, scene, M, { compact: small, canvasTex });
 createPottery(THREE, scene, M, { compact: small, contactShadow: architecture.contactShadow });
-const athena = createAthena(THREE, scene, M, { compact: small, renderer, contactShadow: architecture.contactShadow });
+const gods = createGods(THREE, scene, M, { compact: small, renderer, contactShadow: architecture.contactShadow });
 const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact:small,reduce});
 
 /* Textos de pared: rótulos de sala pintados sobre el muro */
@@ -338,9 +357,10 @@ U1.ficha = 0; U2.ficha = 1; U3.ficha = -1;
 
 /* Rótulos de sala en los muros */
 const rooms = [
-  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -6, x: -5.79 },
+  // Inscripciones en el muro derecho; el dios de cada sala ocupa el fondo izquierdo.
+  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -6, x: 5.79 },
   { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', z: -18, x: 5.79 },
-  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -30, x: -5.79 }
+  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -30, x: 5.79 }
 ];
 rooms.forEach(r => {
   const t = wallText(r.lines, { w: 4.8, h: 1.92, size: 112, sub: r.sub + ' · colección permanente' });
@@ -369,9 +389,9 @@ const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#ffe6c
 scene.add(dust);
 
 /* ---------- Interfaz ---------- */
-const cards = { 1: document.getElementById('card-1'), 3: document.getElementById('card-2'), 5: document.getElementById('card-3') };
+const cards = { 2: document.getElementById('card-1'), 4: document.getElementById('card-2'), 6: document.getElementById('card-3') };
 const roomTitle = document.getElementById('room-title'), roomKicker = document.getElementById('room-kicker'), roomText = document.getElementById('room-text');
-const ROOM_TITLES = { 1: ['Sala I', 'Sistemas'], 3: ['Sala II', 'Automatización'], 5: ['Sala III', 'Lo que viene'] };
+const ROOM_TITLES = { 2: ['Sala I · Atenea', 'Sistemas'], 4: ['Sala II · Hermes', 'Automatización'], 6: ['Sala III · Hefesto', 'Lo que viene'] };
 const entrance = document.querySelector('.entrance'), exit = document.getElementById('contacto');
 const railFill = document.getElementById('rail-fill'), railStops = document.getElementById('rail-stops');
 const roomName = document.getElementById('room-name'), roomCount = document.getElementById('room-count');
@@ -393,19 +413,25 @@ const freeCamera=createFreeCamera(THREE,camera,canvas,{
   onExit:()=>{let best=0,distance=Infinity;for(let n=0;n<=200;n++){const u=n/200*total,d=sample(u).pos.distanceTo(camera.position);if(d<distance){distance=d;best=u;}}
     scrollU=smoothU=best;travelVelocity=0;window.scrollTo({top:best*unitPx(),behavior:'instant'});}
 });
-function openFicha(i) {
-  const f = FICHAS[i]; if (!f) return;
+function openFicha(i) { openInfo(FICHAS[i]); }
+function openGod(id) { openInfo(GOD_INFO[id]); }
+const fichaListTitle = document.querySelector('#ficha .ficha-grid h4');
+function openInfo(f) {
+  if (!f) return;
+  fichaListTitle.textContent = f.listTitle || 'Qué contiene';
   dlg.style.setProperty('--accent', f.accent);
   document.getElementById('ficha-inv').textContent = f.inv;
   document.getElementById('ficha-title').textContent = f.title;
   const text = document.getElementById('ficha-text'); text.replaceChildren(...f.text.map(t => Object.assign(document.createElement('p'), { textContent: t })));
   document.getElementById('ficha-list').replaceChildren(...f.list.map(t => Object.assign(document.createElement('li'), { textContent: t })));
   const acts = document.getElementById('ficha-actions'); acts.replaceChildren();
-  f.links.forEach(([label, href]) => { const a = Object.assign(document.createElement('a'), { className: 'btn', href, target: '_blank', rel: 'noopener noreferrer', textContent: label }); acts.append(a); });
+  (f.links || []).forEach(([label, href]) => { const a = Object.assign(document.createElement('a'), { className: 'btn', href, target: '_blank', rel: 'noopener noreferrer', textContent: label }); acts.append(a); });
   const back = Object.assign(document.createElement('button'), { className: 'btn ghost', type: 'button', textContent: 'Seguir el recorrido' }); back.addEventListener('click', () => dlg.close()); acts.append(back);
   dlg.showModal();
 }
 document.querySelectorAll('[data-ficha]').forEach(b => b.addEventListener('click', () => openFicha(+b.dataset.ficha)));
+document.querySelectorAll('[data-god]').forEach(b => b.addEventListener('click', () => openGod(b.dataset.god)));
+document.querySelectorAll('[data-about]').forEach(b => b.addEventListener('click', () => openInfo(ABOUT)));
 document.getElementById('ficha-close').addEventListener('click', () => dlg.close());
 dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 document.getElementById('copy').addEventListener('click', async e => {
@@ -425,7 +451,7 @@ addEventListener('keydown', e => {
 });
 
 /* Cursor y raycast */
-const cursor = document.getElementById('cursor');
+const cursor = document.getElementById('cursor'), cursorLabel = cursor.querySelector('span');
 const mouse = new THREE.Vector2(0, 0), mouseTarget = new THREE.Vector2(0, 0), ndc = new THREE.Vector2(9, 9);
 const ray = new THREE.Raycaster(); let hovered = null;
 let cx = innerWidth / 2, cy = innerHeight / 2, tx = cx, ty = cy;
@@ -438,9 +464,10 @@ addEventListener('pointermove', e => {
   cursor.style.opacity = '1';
   cursor.style.borderColor = overUI ? 'var(--brass)' : '';
 }, { passive: true });
-canvas.addEventListener('click', () => { if (freeCamera.consumeClick()) return; if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
+canvas.addEventListener('click', () => { if (freeCamera.consumeClick()) return; activateHovered(); });
+function activateHovered() { if (!hovered) return; if (hovered.about) openInfo(ABOUT); else if (hovered.god) openGod(hovered.god); else if (hovered.ficha >= 0) openFicha(hovered.ficha); }
 // los clics caen sobre la pista de scroll (encima del canvas): reenviar
-track.addEventListener('click', () => { if (hovered && hovered.ficha >= 0) openFicha(hovered.ficha); });
+track.addEventListener('click', activateHovered);
 
 /* ---------- Bucle ---------- */
 let scrollU = 0, smoothU = 0, travelVelocity = 0;
@@ -469,7 +496,7 @@ function updateUI(s) {
   const exitVisible = mainAt === STOPS.length - 1 && inHold;
   exit.classList.toggle('on', exitVisible); exit.inert = !exitVisible; exit.setAttribute('aria-hidden', String(!exitVisible));
   // rótulo de sala al llegar
-  const approaching = Object.keys(ROOM_TITLES).map(Number).find(i => { const h = segs.find(g => g.type === 'hold' && g.i === i); return smoothU > h.a - .7 && smoothU < h.a - .05; });
+  const approaching = Object.keys(ROOM_TITLES).map(Number).find(i => { const h = segs.find(g => g.type === 'hold' && g.i === i); return smoothU > h.a - 1.0 && smoothU < h.a + .55; });
   if (approaching != null) { roomKicker.textContent = ROOM_TITLES[approaching][0]; roomText.textContent = ROOM_TITLES[approaching][1]; }
   roomTitle.classList.toggle('on', approaching != null);
   railFill.style.width = `${smoothU / total * 100}%`;
@@ -501,6 +528,7 @@ function loop() {
     canvas.dataset.cameraMode='recorrido';
   }
   architecture.update(camera,dt,reduce,t);
+  athens.update(reduce ? 0 : t, camera);
   fires.update(t,camera,reduce);
 
   urns.forEach((u, i) => {
@@ -519,9 +547,11 @@ function loop() {
   // hover sobre urnas
   if (finePointer && !dlg.open) {
     ray.setFromCamera(ndc, camera);
-    const hit = ray.intersectObjects(urns.map(u => u.hit), false)[0];
-    const u = hit && hit.distance < 9 ? urns.find(x => x.hit === hit.object) : null;
-    hovered = u && u.ficha >= 0 ? u : null;
+    const targets = [...urns.map(u => u.hit), ...gods.hits.map(g => g.mesh), athens.wallHit];
+    const hit = ray.intersectObjects(targets, false)[0];
+    const u = hit && hit.distance < 12 ? (urns.find(x => x.hit === hit.object) || gods.hits.find(g => g.mesh === hit.object) || (hit.object === athens.wallHit ? ABOUT_HIT : null)) : null;
+    hovered = u && (u.god || u.about || u.ficha >= 0) ? u : null;
+    if (hovered) cursorLabel.textContent = hovered.about ? 'Sobre mí' : hovered.god ? `Conocer a ${GOD_INFO[hovered.god].title}` : 'Ver ficha';
     cursor.classList.toggle('view', !!hovered);
   } else hovered = null;
   cx += (tx - cx) * (1 - Math.pow(.0001, dt)); cy += (ty - cy) * (1 - Math.pow(.0001, dt));
@@ -556,7 +586,7 @@ addEventListener('resize', () => {
 /* ---------- Telón de carga ---------- */
 const count = document.getElementById('count');
 // Los lienzos solo usan una fuente web si ya está cargada: se piden de forma explícita.
-const fontsReady = document.fonts ? Promise.all(['600 64px "Cinzel"', '500 22px "Cinzel"', 'italic 500 24px "Cormorant Garamond"', '600 26px "Instrument Sans"', '17px "JetBrains Mono"'].map(f => document.fonts.load(f).catch(() => {}))).then(() => document.fonts.ready) : Promise.resolve();
+const fontsReady = document.fonts ? Promise.all(['600 64px "Cinzel"', '600 92px "EB Garamond"', '500 22px "Cinzel"', 'italic 500 24px "Cormorant Garamond"', '600 26px "Instrument Sans"', '17px "JetBrains Mono"'].map(f => document.fonts.load(f).catch(() => {}))).then(() => document.fonts.ready) : Promise.resolve();
 let shown = 0; const start = performance.now();
 const tick = () => {
   const elapsed = performance.now() - start;
@@ -567,9 +597,9 @@ const tick = () => {
 tick();
 Promise.race([fontsReady, new Promise(r => setTimeout(r, 2500))]).then(() => {
   // redibuja los rótulos ya con las fuentes cargadas
-  TEXTS.forEach(redraw => redraw()); athena.redrawLabel();
+  TEXTS.forEach(redraw => redraw()); gods.redraw();
   // La escultura se espera unos segundos; si la red va lenta aparece en cuanto llegue.
-  return Promise.race([athena.ready, new Promise(r => setTimeout(r, 6000))]);
+  return Promise.race([gods.ready, new Promise(r => setTimeout(r, 6000))]);
 }).then(() => {
   renderer.compile(scene, camera);
   const wait = Math.max(0, (reduce ? 400 : 1250) - (performance.now() - start));

@@ -145,8 +145,10 @@ export function createFires(THREE, scene, M, { compact, canvasTex }) {
   // Dos braseros sobre basas flanquean la escalinata; uno en cada sala.
   brazier({ x: -6.9, z: 9.4, base: -.6, pedestal: true, size: 1, light: 9, range: 12, seed: 1.3 });
   brazier({ x: 6.9, z: 9.4, base: -.6, pedestal: true, size: 1.06, light: 9, range: 12, seed: 4.7 });
+  // Brasero junto al muro grabado del ágora.
+  brazier({ x: 9.4, z: 33.4, base: -.6, pedestal: true, size: .9, light: 8, range: 12, seed: 3.3 });
   brazier({ x: 4.25, z: -9.4, size: .8, light: 4.5, range: 8, seed: 7.9 });
-  brazier({ x: -4.25, z: -21.4, size: .8, light: 4.5, range: 8, seed: 2.2 });
+  brazier({ x: 4.25, z: -21.6, size: .8, light: 4.5, range: 8, seed: 2.2 });
   brazier({ x: 4.25, z: -33.4, size: .8, light: 4.5, range: 8, seed: 5.6 });
 
   // Ruido 1D suave para la intensidad: varias frecuencias, sin patrón regular.

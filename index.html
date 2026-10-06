@@ -7,7 +7,7 @@
 <meta name="description" content="Portafolio de José Miguel Miralles Gandia: proyectos web y aplicaciones expuestos en un templo griego en 3D que se recorre con la rueda del ratón.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
 
 
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -30,8 +30,8 @@
 <header class="topbar">
   <a class="mark" href="#entrada" data-goto="0"><b>J. M. Miralles</b><span>Colección permanente · 2026</span></a>
   <nav class="top-actions" aria-label="Recorrido">
-    <button class="pill" type="button" data-goto="1">Colección</button>
-    <button class="pill" type="button" data-goto="4">Contacto</button>
+    <button class="pill" type="button" data-goto="2">Colección</button>
+    <button class="pill" type="button" data-goto="5">Contacto</button>
   </nav>
 </header>
 
@@ -40,10 +40,12 @@
 <div class="free-hud" id="free-hud" hidden>WASD · Moverte &nbsp; Arrastra el ratón · Mirar &nbsp; Q / E · Altura &nbsp; Mayús · Correr &nbsp; Esc · Volver</div>
 <main>
   <section class="entrance" id="entrada" aria-labelledby="t-entrada">
-    <p class="kicker">Portafolio · Desarrollo web y aplicaciones</p>
+    <p class="kicker">Ágora · Portafolio 2026</p>
     <h1 id="t-entrada"><span class="row"><span>José Miguel</span></span><span class="row"><span>Miralles</span></span></h1>
     <div class="sub">
-      <p>Arquitectura clásica, ideas nuevas. Cruza el pórtico y recorre las salas donde expongo mis <strong>proyectos web y aplicaciones</strong>.</p>
+      <p>Lee la inscripción del muro y cruza el pórtico del Partenón: cada sala guarda uno de mis <strong>proyectos web y aplicaciones</strong>.</p>
+      <p class="sr-only">Estudiante de 1.º de DAM (Desarrollo de Aplicaciones Multiplataforma) en el IES Dr. Lluís Simarro. Busco un lugar donde trabajar y seguir creciendo. Hago páginas web y estoy aprendiendo a crear automatizaciones con IA para empresas.</p>
+      <button class="btn ghost about-btn" type="button" data-about>Sobre mí</button>
       <div class="scroll-hint"><span class="wheel" aria-hidden="true"></span><span class="hint-desktop">Desplázate para abrir las puertas</span><span class="hint-mobile">Desliza hacia arriba para entrar</span></div>
     </div>
   </section>
@@ -62,12 +64,13 @@
     </dl>
     <div class="lc-actions">
       <button class="btn" type="button" data-ficha="0">Abrir ficha</button>
+      <button class="btn ghost god-btn" type="button" data-god="atenea">Conocer a Atenea</button>
       <a class="btn ghost" href="https://josemidev1.site" target="_blank" rel="noopener noreferrer">Probar JOSEMI-OS ↗</a>
       <a class="btn ghost" href="https://github.com/josemidev1-code/JOSEMI-OS" target="_blank" rel="noopener noreferrer">Código en GitHub ↗</a>
     </div>
   </article>
 
-  <article class="label-card left" id="card-2" style="--accent: #8db4ff" aria-labelledby="t-gym">
+  <article class="label-card" id="card-2" style="--accent: #8db4ff" aria-labelledby="t-gym">
     <div class="lc-head"><span class="inv">Nº inv. JM-002</span><span>Sala II · Urna 02</span></div>
     <h2 id="t-gym">Asistente de gimnasio</h2>
     <p class="artist">Prototipo: WhatsApp, n8n e IA</p>
@@ -79,6 +82,7 @@
     </dl>
     <div class="lc-actions">
       <button class="btn" type="button" data-ficha="1">Abrir ficha</button>
+      <button class="btn ghost god-btn" type="button" data-god="hermes">Conocer a Hermes</button>
     </div>
   </article>
 
@@ -93,6 +97,7 @@
     </dl>
     <div class="lc-actions">
       <a class="btn ghost" href="https://github.com/josemidev1-code" target="_blank" rel="noopener noreferrer">Ver mi GitHub ↗</a>
+      <button class="btn ghost god-btn" type="button" data-god="hefesto">Conocer a Hefesto</button>
     </div>
   </article>
 

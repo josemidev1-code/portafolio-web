@@ -148,7 +148,6 @@ export function createPottery(THREE, scene, M, { compact, box, contactShadow }) 
     }
     pieces.push({ group: g, x, z, r: .55 });
   }
-  vase({ kind: 'neckAmphora', style: 'black', x: 4.25, z: -3.5, rot: -1.2, seed: 1 });
   vase({ kind: 'hydria', style: 'black', x: -4.3, z: -3.2, rot: 1.0, seed: 2, scale: 1.3 });
   vase({ kind: 'krater', style: 'red', x: -4.25, z: -14.6, rot: 1.1, seed: 3, scale: 1.35 });
   vase({ kind: 'bellyAmphora', style: 'red', x: 4.25, z: -19.4, rot: -1.0, seed: 4 });
