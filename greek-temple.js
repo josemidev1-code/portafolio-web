@@ -1,206 +1,353 @@
-/** Arquitectura del museo: mármol, pórtico dórico y puertas articuladas. */
+/** Arquitectura del museo: pórtico dórico hexástilo, sala columnada con entablamento,
+ *  techo de casetones pintados, lucernarios con haces de luz y puertas de bronce. */
 import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { smootherStep } from './motion.js';
+import { worldUV } from './materials.js';
 
-export function createGreekMuseum(THREE, scene, canvasTex, compact) {
-  const marbleMap = canvasTex(512, 512, (g, w, h) => {
-    g.fillStyle = '#c7bfae'; g.fillRect(0, 0, w, h);
-    let seed = 73;
-    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    for (let i = 0; i < 28; i++) {
-      g.beginPath(); const x = random() * w; g.moveTo(x, 0);
-      for (let y = 0; y <= h; y += 16) g.lineTo(x + Math.sin(y * .017 + i) * 35 + random() * 12, y);
-      g.strokeStyle = `rgba(83,74,58,${.025 + random() * .065})`; g.lineWidth = .6 + random() * 2; g.stroke();
+// Dirección del sol: alto y desde la izquierda del pórtico, para que entre por los lucernarios.
+export const SUN_OFFSET = [-7, 22, 9];
+const HALL = { x: 6, top: 8, start: 4.05, end: -46.2 };
+
+export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
+  const statics = new THREE.Group(); scene.add(statics);
+  // Escala de la proyección de textura en metros reales por material.
+  const uvScale = new Map([[M.wall, [1 / 3.4, 1 / 1.7]], [M.darkStone, [1 / 3.2, 1 / 1.1]], [M.marble, [.45, .45]], [M.marbleWarm, [.4, .4]], [M.marbleGrey, [.5, .5]], [M.bronze, [.8, .8]]]);
+
+  /* Bloques con un chaflán fino: aristas nítidas que atrapan la luz, sin aspecto blando. */
+  const boxCache = new Map(), plain = new THREE.BoxGeometry(1, 1, 1);
+  function chamferBox(w, h, d) {
+    const key = [w, h, d].map(n => n.toFixed(3)).join('/'); if (boxCache.has(key)) return boxCache.get(key);
+    const b = Math.min(.018, w * .08, h * .08, d * .08), x = w / 2 - b, y = h / 2 - b;
+    const s = new THREE.Shape(); s.moveTo(-x, -y); s.lineTo(x, -y); s.lineTo(x, y); s.lineTo(-x, y); s.closePath();
+    const geo = new THREE.ExtrudeGeometry(s, { depth: d - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 1, curveSegments: 1 });
+    geo.translate(0, 0, -d / 2 + b); boxCache.set(key, geo); return geo;
+  }
+  function box(w, h, d, x, y, z, mat = M.marble, parent = statics) {
+    const small = Math.min(w, h, d) < .1;
+    const m = new THREE.Mesh(small ? plain : chamferBox(w, h, d), mat);
+    if (small) m.scale.set(w, h, d);
+    m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+  }
+  const contactMap = canvasTex(128, 128, (g, w, h) => {
+    const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(14,11,8,.55)'); gr.addColorStop(.45, 'rgba(14,11,8,.28)'); gr.addColorStop(1, 'rgba(14,11,8,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  const contactMat = new THREE.MeshBasicMaterial({ map: contactMap, transparent: true, depthWrite: false, opacity: .8 });
+  function contactShadow(x, z, sx, sz = sx, y = .006) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(sx, sz), contactMat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.renderOrder = 1; scene.add(m);
+  }
+
+  /* ---------- Suelos ---------- */
+  const floorGeo = new THREE.PlaneGeometry(12, HALL.start - HALL.end);
+  const floor = new THREE.Mesh(floorGeo, M.withRepeat(M.floor, 12 / 4.8, (HALL.start - HALL.end) / 4.8));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (HALL.start + HALL.end) / 2); floor.receiveShadow = true; scene.add(floor);
+  const plaza = new THREE.Mesh(new THREE.PlaneGeometry(90, 60), M.withRepeat(M.floor, 90 / 7, 60 / 7));
+  plaza.material = plaza.material.clone(); plaza.material.color.set('#8d8475'); plaza.material.roughness = 1.25;
+  plaza.rotation.x = -Math.PI / 2; plaza.position.set(0, -.6, 38); plaza.receiveShadow = true; scene.add(plaza);
+  // Guía de bronce embutida en el pavimento hasta la última sala.
+  [-2.4, 2.4].forEach(x => box(.05, .012, 49.4, x, .002, -21, M.gilt));
+
+  /* ---------- Muros de sillería con zócalo de ortostatos ---------- */
+  const wallLen = HALL.start - HALL.end, wallZ = (HALL.start + HALL.end) / 2;
+  [-1, 1].forEach(s => {
+    box(.4, HALL.top, wallLen, s * (HALL.x + .2), HALL.top / 2, wallZ, M.wall);
+    box(.1, 1.15, wallLen, s * (HALL.x - .05), .575, wallZ, M.darkStone);         // ortostatos
+    box(.2, .14, wallLen, s * (HALL.x - .1), .07, wallZ, M.marbleGrey);            // plinto
+    box(.16, .07, wallLen, s * (HALL.x - .08), 1.18, wallZ, M.marble);             // cimacio
+    box(.06, .04, wallLen, s * (HALL.x - .03), 1.05, wallZ, M.marble);
+    // Entablamento interior: arquitrabe con tenia, friso dórico y cornisa con mútulos.
+    box(.26, .56, wallLen, s * (HALL.x - .13), 6.68, wallZ, M.marble);
+    box(.32, .07, wallLen, s * (HALL.x - .16), 6.995, wallZ, M.marble);
+    box(.18, .58, wallLen, s * (HALL.x - .09), 7.32, wallZ, M.marbleWarm);
+    box(.5, .26, wallLen, s * (HALL.x - .25), 7.74, wallZ, M.marble);
+    box(.56, .08, wallLen, s * (HALL.x - .28), 7.9, wallZ, M.marble);
+    for (let z = HALL.start - .7; z > HALL.end + .3; z -= 1) {
+      const x = s * (HALL.x - .2);
+      [-.12, 0, .12].forEach(dz => box(.06, .52, .085, x, 7.31, z + dz, M.darkStone));
+      box(.08, .025, .42, s * (HALL.x - .19), 7.025, z, M.darkStone);               // régula
+      box(.36, .035, .42, s * (HALL.x - .32), 7.6, z, M.marbleGrey);                 // mútulo
     }
-    // Pátina mineral y fisuras finas en la piedra envejecida.
-    for(let i=0;i<18;i++){const x=random()*w,y=random()*h;g.strokeStyle='rgba(48,41,32,.13)';g.lineWidth=.5;g.beginPath();g.moveTo(x,y);g.lineTo(x+random()*28,y+random()*42);g.lineTo(x+random()*45,y+random()*65);g.stroke();}
-    for (let i = 0; i < 5000; i++) { g.fillStyle = `rgba(255,255,255,${random() * .1})`; g.fillRect(random()*w, random()*h, 2, 2); }
   });
-  const marble = new THREE.MeshStandardMaterial({ color: '#b7afa0', map: marbleMap, bumpMap: marbleMap, bumpScale: .04, roughness: .7 });
-  const darkStone = new THREE.MeshStandardMaterial({ color: '#655e53', map: marbleMap, roughness: .75 });
-  const bronze = new THREE.MeshStandardMaterial({ color: '#ac8050', metalness: .78, roughness: .27 });
-  const woodMap = canvasTex(256,512,(g,w,h)=> {
-    g.fillStyle='#443d32';g.fillRect(0,0,w,h);
-    for(let i=0;i<180;i++){g.strokeStyle=i%3?'rgba(20,16,11,.12)':'rgba(173,145,94,.12)';g.lineWidth=.5;
-      g.beginPath();g.moveTo(i*1.6,0);for(let y=0;y<h;y+=12)g.lineTo(i*1.6+Math.sin(y*.017+i)*1.5,y);g.stroke();}
-  });
-  const doorMat = new THREE.MeshStandardMaterial({ color: '#6b6252', map: woodMap, bumpMap: woodMap, bumpScale:.015, metalness: .12, roughness: .42 });
-  // Los biseles capturan la luz sin cargar modelos externos.
-  const bevelCache = new Map();
-  function softBox(w,h,d) {
-    const key=[w,h,d].join('/'); if(bevelCache.has(key))return bevelCache.get(key);
-    const b=Math.min(.055,w*.09,h*.09,d*.18),x=w/2-b,y=h/2-b,r=Math.min(b,x*.3,y*.3);
-    const s=new THREE.Shape();s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);
-    s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);
-    s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);
-    const geo=new THREE.ExtrudeGeometry(s,{depth:d-2*b,bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:compact?2:3,steps:1,curveSegments:3});
-    geo.translate(0,0,-d/2+b);bevelCache.set(key,geo);return geo;
-  }
-  const contactMap=canvasTex(128,128,(g,w,h)=>{
-    const gradient=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);gradient.addColorStop(0,'rgba(19,16,12,.5)');gradient.addColorStop(.3,'rgba(19,16,12,.3)');gradient.addColorStop(1,'rgba(19,16,12,0)');g.fillStyle=gradient;g.fillRect(0,0,w,h);
-  });
-  function contactShadow(x,z,size) {
-    const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size),new THREE.MeshBasicMaterial({map:contactMap,transparent:true,depthWrite:false,opacity:.75}));
-    m.rotation.x=-Math.PI/2;m.position.set(x,.012,z);scene.add(m);
-  }
-  function box(w, h, d, x, y, z, mat = marble, parent = scene) {
-    const m = new THREE.Mesh(softBox(w,h,d),mat); m.position.set(x,y,z);
-    m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
-  }
-  const tile = canvasTex(512,512,(g,w,h) => {
-    g.drawImage(marbleMap.userData.canvas,0,0); g.strokeStyle='#817760'; g.lineWidth=2; g.strokeRect(0,0,w,h);
-  },{repeat:[7,48]});
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(22,100),new THREE.MeshStandardMaterial({map:tile,color:'#dbd2bd',roughness:.36,metalness:.08}));
-  floor.rotation.x=-Math.PI/2; floor.position.set(0,-.015,-14); floor.receiveShadow=true; scene.add(floor);
-  // Dos líneas de bronce guían la mirada hasta la última sala.
-  [-2.75,2.75].forEach(x=>box(.035,.012,62,x,0,-15,bronze));
-  [-6,6].forEach(x=> {
-    box(.35,7.8,50,x,3.9,-21);
-    box(.48,.32,50,x, .16,-21,darkStone);
-    box(.55,.28,50,x,7.2,-21);
-  });
-  // Techo con casetones y lucernarios centrales.
-  [-4.2,4.2].forEach(x=>box(3.6,.28,50,x,7.65,-21));
-  const skylightMat = new THREE.MeshBasicMaterial({color:'#b7c7d1', transparent:true, opacity:.34});
-  for(let z=1;z>-45;z-=6) {
-    box(12,.3,.3,0,7.6,z);
-    box(4.4,.035,4.5,0,7.8,z-2.8,skylightMat);
-    [-4.2,4.2].forEach(x=>{box(2.9,.1,4.7,x,7.43,z-2.8,darkStone); box(2.6,.12,4.3,x,7.38,z-2.8);});
-  }
-  box(12,7.8,.4,0,3.9,-46);
-  // Geometría acanalada compartida por todas las columnas.
-  const shaftGeo = new THREE.CylinderGeometry(.32,.43,5.55,compact?48:96,6);
-  const positions=shaftGeo.attributes.position;
-  for(let i=0;i<positions.count;i++) {
-    const x=positions.getX(i),z=positions.getZ(i),a=Math.atan2(z,x);
-    const flute=(1-.085*(.5+.5*Math.cos(a*20)))*(1+.022*Math.sin((positions.getY(i)/5.55+.5)*Math.PI)); positions.setX(i,x*flute); positions.setZ(i,z*flute);
-  }
-  shaftGeo.computeVertexNormals();
-  const ringGeo = new THREE.TorusGeometry(.42,.075,8,32);
-  function column(x,z,height=1) {
-    const g=new THREE.Group();g.position.set(x,0,z);g.scale.y=height;scene.add(g); contactShadow(x,z,2.3);
-    box(1,.24,1,0,.12,0,darkStone,g);box(.84,.15,.84,0,.32,0,marble,g);
-    const shaft=new THREE.Mesh(shaftGeo,marble);shaft.position.y=3.2;shaft.castShadow=true;shaft.receiveShadow=true;g.add(shaft);
-    [.52,.65,5.98].forEach(y=>{const ring=new THREE.Mesh(ringGeo,marble);ring.rotation.x=Math.PI/2;ring.position.y=y;g.add(ring);});
-    const echinus=new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(.33,0),new THREE.Vector2(.38,.06),new THREE.Vector2(.46,.15),new THREE.Vector2(.49,.23)],compact?32:64),marble);echinus.position.y=5.94;echinus.castShadow=true;echinus.receiveShadow=true;g.add(echinus);
-    box(.95,.14,.95,0,6.2,0,marble,g); box(1.05,.15,1.05,0,6.31,0,marble,g);
-  }
-  [-5,-3.5,3.5,5].forEach(x=>column(x,5.2));
-  for(let z=-3;z>-43;z-=6) [-5,5].forEach(x=>column(x,z,1.14));
-  // Fachada con paso central, frontón triangular y friso de triglifos.
-  [-4.3,4.3].forEach(x=>box(3.4,6.5,.65,x,3.25,3.7));
-  box(12,1.05,1.7,0,6.9,4.35); box(12.6,.22,2,0,7.55,4.35);
-  for(let x=-5.6;x<=5.6;x+=.8) { box(.22,.56,.12,x,6.98,5.25,darkStone); [-.065,.065].forEach(dx=>box(.018,.48,.035,x+dx,6.98,5.33,bronze)); }
-  const triangle=new THREE.Shape();triangle.moveTo(-6.3,0);triangle.lineTo(0,2.15);triangle.lineTo(6.3,0);triangle.closePath();
-  const pediment=new THREE.Mesh(new THREE.ExtrudeGeometry(triangle,{depth:.65,bevelEnabled:true,bevelThickness:.04,bevelSize:.04,bevelSegments:3}),marble);pediment.position.set(0,7.68,3.6);pediment.castShadow=true;scene.add(pediment);
-  [-1,1].forEach(side=> { const cornice=box(6.7,.18,1.2,side*3.15,8.78,4.15); cornice.rotation.z=-side*Math.atan2(2.15,6.3); });
-  const meanderMap=canvasTex(1024,64,(g,w,h)=>{
-    g.clearRect(0,0,w,h);g.strokeStyle='#75644a';g.lineWidth=4;
-    for(let x=0;x<w;x+=64){g.beginPath();g.moveTo(x,50);g.lineTo(x+54,50);g.lineTo(x+54,12);g.lineTo(x+14,12);g.lineTo(x+14,37);g.lineTo(x+39,37);g.lineTo(x+39,25);g.stroke();}
-  });
-  const frieze=new THREE.Mesh(new THREE.PlaneGeometry(11.8,.38),new THREE.MeshStandardMaterial({map:meanderMap,transparent:true,roughness:.65}));frieze.position.set(0,7.49,5.39);scene.add(frieze);
-  // Omega en relieve: arco abierto y dos pies, modelado en bronce rojo.
-  const omegaShape=new THREE.Shape();
-  omegaShape.moveTo(-.4101,-.3601);omegaShape.absarc(0,.05,.58,Math.PI*1.25,Math.PI*1.75,true);
-  omegaShape.lineTo(.68,-.36);omegaShape.lineTo(.68,-.52);omegaShape.lineTo(.20,-.52);omegaShape.lineTo(.20,-.29);
-  omegaShape.lineTo(.2828,-.2328);omegaShape.absarc(0,.05,.4,-Math.PI/4,Math.PI*1.25,false);
-  omegaShape.lineTo(-.20,-.29);omegaShape.lineTo(-.20,-.52);omegaShape.lineTo(-.68,-.52);omegaShape.lineTo(-.68,-.36);omegaShape.closePath();
-  const crimson=new THREE.MeshStandardMaterial({color:'#8e2421',metalness:.55,roughness:.32,emissive:'#3c0805',emissiveIntensity:.25});
-  const emblem=new THREE.Mesh(new THREE.ExtrudeGeometry(omegaShape,{depth:.09,bevelEnabled:true,bevelThickness:.018,bevelSize:.018,bevelSegments:3,curveSegments:32}),crimson);
-  emblem.scale.setScalar(1.18);emblem.position.set(0,8.38,4.3);emblem.castShadow=true;emblem.receiveShadow=true;scene.add(emblem);
-  // Las puertas siguen la cámara también al retroceder.
-  const doors=[];
-  function portal(z,width,height,front=false) {
-    const half=width/2;
-    // Marco escalonado: cada moldura proyecta su propia sombra.
-    for(let layer=0;layer<3;layer++) {
-      const offset=layer*.105;
-      [-1,1].forEach(side=>box(.11,height+.45+offset*2,.13,side*(half+.34+offset),(height+.45)/2,z+.28+layer*.055));
-      box(width+.78+offset*2,.11,.13,0,height+.43+offset,z+.28+layer*.055);
+  // Policromía: una greca pintada recorre la cornisa como en los templos originales.
+  const meander = canvasTex(1024, 64, (g, w, h) => {
+    g.fillStyle = '#6d2a1c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#d9b77a'; g.lineWidth = 5; g.lineJoin = 'miter';
+    for (let x = 0; x < w; x += 64) { g.beginPath(); g.moveTo(x, 52); g.lineTo(x + 56, 52); g.lineTo(x + 56, 12); g.lineTo(x + 16, 12); g.lineTo(x + 16, 38); g.lineTo(x + 42, 38); g.lineTo(x + 42, 24); g.stroke(); }
+    g.fillStyle = '#d9b77a'; g.fillRect(0, 0, w, 3); g.fillRect(0, h - 3, w, 3);
+  }, { repeat: [Math.round(wallLen / 1.6), 1] });
+  const meanderMat = new THREE.MeshStandardMaterial({ map: meander, roughness: .85 });
+  [-1, 1].forEach(s => { const band = new THREE.Mesh(new THREE.PlaneGeometry(wallLen, .2), meanderMat); band.position.set(s * (HALL.x - .505), 7.74, wallZ); band.rotation.y = -s * Math.PI / 2; statics.add(band); });
+
+  /* ---------- Columnas dóricas: 20 estrías de arista viva, éntasis y capitel ---------- */
+  function shaftGeometry(height, r0, r1) {
+    const flutes = 20, perFlute = compact ? 4 : 8;
+    const geo = new THREE.CylinderGeometry(r1, r0, height, flutes * perFlute, compact ? 6 : 10, false);
+    const p = geo.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), y = p.getY(i) / height + .5, r = Math.hypot(x, z);
+      if (r < 1e-4) continue;
+      const a = Math.atan2(z, x), f = ((a / (Math.PI * 2)) * flutes % 1 + 1) % 1;
+      const flute = 1 - .055 * Math.sin(Math.PI * f);                       // acanaladura cóncava
+      const entasis = 1 + .028 * Math.sin(Math.PI * Math.min(1, y * 1.15)); // ligera curvatura
+      p.setX(i, x * flute * entasis); p.setZ(i, z * flute * entasis);
     }
-    [-1,1].forEach(side=>box(.35,height+.25,.55,side*(half+.2),(height+.25)/2,z));
-    box(width+1,.35,.6,0,height+.18,z);
-    if(!front) {[-1,1].forEach(side=>box(6-half-.35,7.5,.3,side*(half+.35+(6-half-.35)/2),3.75,z)); box(width,.8,.3,0,7.05,z);}
-    const hinges=[];
-    [-1,1].forEach(side=> {
-      const pivot=new THREE.Group(); pivot.userData.movingDoor=true; pivot.position.set(side*half,0,z);scene.add(pivot);
-      const center=-side*half/2;
-      box(half-.018,height,.22,center,height/2,0,doorMat,pivot);
-      // Paneles en relieve, molduras finas y rosetas de bronce.
-      [-1,1].forEach(edge=>box(.034,height-.18,.055,center+edge*(half/2-.075),height/2,.145,bronze,pivot));
-      [.13,height-.13].forEach(y=>box(half-.15,.034,.05,center,y,.15,bronze,pivot));
-      [.25,.75].forEach(f=>{
-        const panelW=half-.42,panelH=height*.39,y=height*f;
-        box(panelW,panelH,.075,center,y,.135,bronze,pivot);
-        box(panelW-.07,panelH-.07,.08,center,y,.18,doorMat,pivot);
-        [-1,1].forEach(edge=>{
-          box(.025,panelH-.18,.035,center+edge*(panelW/2-.085),y,.23,bronze,pivot);
-          box(panelW-.17,.025,.035,center,y+edge*(panelH/2-.085),.23,bronze,pivot);
-        });
-        const medallion=new THREE.Mesh(new THREE.TorusGeometry(.16,.018,8,32),bronze);medallion.position.set(center,y,.25);pivot.add(medallion);
-        for(let petal=0;petal<8;petal++){
-          const angle=petal*Math.PI/4;
-          const leaf=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),bronze);leaf.scale.set(.65,1.8,.4);leaf.position.set(center+Math.sin(angle)*.092,y+Math.cos(angle)*.092,.255);leaf.rotation.z=-angle;pivot.add(leaf);
-        }
+    geo.computeVertexNormals();
+    // UV en metros reales para que el mármol no se estire.
+    const uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * r0 * 2 * Math.PI * .45, uv.getY(i) * height * .45);
+    return geo;
+  }
+  function echinusGeometry(r) {
+    const pts = [[r * .78, 0], [r * .8, .03], [r * .95, .1], [r * 1.12, .18], [r * 1.24, .25], [r * 1.28, .3]].map(([x, y]) => new THREE.Vector2(x, y));
+    return new THREE.LatheGeometry(pts, compact ? 40 : 80);
+  }
+  function column(x, z, { height = 6.6, r = .45, base = 0 } = {}) {
+    const g = new THREE.Group(); g.position.set(x, base, z); statics.add(g);
+    const capH = .55, shaftH = height - capH;
+    const shaft = new THREE.Mesh(shaftGeometry(shaftH, r, r * .8), M.marble); shaft.position.y = shaftH / 2; shaft.userData.keepUV = true; shaft.castShadow = shaft.receiveShadow = true; g.add(shaft);
+    // Anillos (annuli) y collarino bajo el equino.
+    [0, .035, .07].forEach(dy => { const ring = new THREE.Mesh(new THREE.TorusGeometry(r * .8, .012, 6, compact ? 32 : 64), M.marble); ring.rotation.x = Math.PI / 2; ring.position.y = shaftH - .04 + dy; ring.userData.keepUV = true; g.add(ring); });
+    const ech = new THREE.Mesh(echinusGeometry(r), M.marble); ech.position.y = shaftH + .02; ech.userData.keepUV = true; ech.castShadow = true; ech.receiveShadow = true; g.add(ech);
+    box(r * 2.85, .2, r * 2.85, 0, height - .1, 0, M.marble, g);   // ábaco
+    contactShadow(x, z, r * 4.4, r * 4.4, base + .006);
+    return g;
+  }
+
+  /* ---------- Pórtico de entrada ---------- */
+  const F = { half: 9.2, wallZ: 3.7, colZ: 6.45, front: 7.2, top: 6.6 };
+  // Crepidoma: estilóbato y tres gradas hasta la plaza.
+  box(F.half * 2, .6, F.front - 4.05, 0, -.3, (F.front + 4.05) / 2, M.marbleWarm);
+  for (let i = 1; i <= 2; i++) box(F.half * 2 + i * .9, .2, .45, 0, -.1 - i * .2, F.front + i * .45 - .225, M.marbleWarm);
+  // Muro de fachada con el vano de la puerta.
+  [-1, 1].forEach(s => box(F.half - 2.95, F.top, .65, s * (2.95 + (F.half - 2.95) / 2 - .4), F.top / 2, F.wallZ, M.wall));
+  box(5.9, F.top - 5.95, .65, 0, (F.top + 5.95) / 2, F.wallZ, M.wall);
+  [-1, 1].forEach(s => box(F.half - 3.45, 1.15, .12, s * (2.95 + (F.half - 3.45) / 2), .575, F.wallZ + .37, M.darkStone));
+  [-1, 1].forEach(s => box(.7, F.top, .9, s * (F.half - .75), F.top / 2, F.wallZ + .1, M.marble)); // antas
+  const colsX = [-7.6, -5.45, -3.3, 3.3, 5.45, 7.6];
+  colsX.forEach(x => column(x, F.colZ, { height: F.top, r: .52 }));
+  // Entablamento: arquitrabe, friso de triglifos y metopas, cornisa con mútulos.
+  const depth = F.front - 3.35, cz = (F.front + 3.35) / 2;
+  box(F.half * 2 - .5, .78, depth, 0, F.top + .39, cz - .05, M.marble);
+  box(F.half * 2 - .4, .08, depth + .06, 0, F.top + .82, cz - .02, M.marble);              // tenia
+  box(F.half * 2 - .6, .8, depth - .2, 0, F.top + 1.26, cz - .15, M.marbleWarm);
+  const triX = []; for (let i = 0; i < colsX.length; i++) { triX.push(colsX[i]); if (i < colsX.length - 1) { const a = colsX[i], b = colsX[i + 1], n = Math.round((b - a) / 1.15); for (let k = 1; k < n; k++) triX.push(a + (b - a) * k / n); } }
+  [-F.half + .55, F.half - .55].forEach(x => triX.push(x));
+  triX.forEach(x => {
+    [-.17, 0, .17].forEach(dx => box(.105, .78, .12, x + dx, F.top + 1.25, F.front - .2, M.darkStone));
+    box(.5, .035, .1, x, F.top + .845, F.front - .03, M.darkStone);                       // régula
+    for (let k = -2.5; k <= 2.5; k++) box(.03, .04, .03, x + k * .075, F.top + .81, F.front - .01, M.marble); // gotas
+    box(.5, .04, .5, x, F.top + 1.66, F.front + .02, M.marbleGrey);                        // mútulo
+  });
+  box(F.half * 2 + .7, .34, depth + .7, 0, F.top + 1.85, cz + .2, M.marble);               // cornisa
+  box(F.half * 2 + .8, .08, depth + .8, 0, F.top + 2.06, cz + .22, M.marble);
+  // Frontón: tímpano retranqueado, cornisas inclinadas y acroteras.
+  const pedBase = F.top + 2.1, pedH = 2.25, pedHalf = F.half + .35;
+  const tri = new THREE.Shape(); tri.moveTo(-pedHalf + .5, 0); tri.lineTo(0, pedH - .3); tri.lineTo(pedHalf - .5, 0); tri.closePath();
+  const tympanum = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 3.2, bevelEnabled: false }), M.marbleWarm);
+  tympanum.position.set(0, pedBase, 3.5); tympanum.castShadow = tympanum.receiveShadow = true; statics.add(tympanum);
+  const slope = Math.atan2(pedH, pedHalf), rakeLen = Math.hypot(pedH, pedHalf) + .25;
+  [-1, 1].forEach(s => {
+    const rake = box(rakeLen, .36, depth + .9, s * pedHalf / 2, pedBase + pedH / 2 + .02, cz + .25, M.marble); rake.rotation.z = -s * slope;
+    const sima = box(rakeLen, .1, depth + 1, s * pedHalf / 2, pedBase + pedH / 2 + .24, cz + .27, M.marble); sima.rotation.z = -s * slope;
+    sima.position.x -= s * Math.sin(slope) * .2;
+  });
+  // Acroteras: palmetas de mármol en el vértice y en los extremos.
+  function palmette(scale) {
+    const sh = new THREE.Shape(); sh.moveTo(0, 0);
+    for (let i = 0; i <= 8; i++) { const a = Math.PI * (.12 + .76 * i / 8), len = 1 - Math.abs(i - 4) * .09; const x = Math.cos(a) * len, y = Math.sin(a) * len; sh.quadraticCurveTo(x * .55 - .03, y * .55, x, y); sh.quadraticCurveTo(x * .62 + .03, y * .62, 0, .02); }
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: .1, bevelEnabled: true, bevelThickness: .02, bevelSize: .015, bevelSegments: 1, curveSegments: 6 });
+    geo.scale(scale, scale, 1); geo.rotateZ(0); return geo;
+  }
+  [[0, pedBase + pedH + .1, 1.05], [-F.half - .1, pedBase + .1, .7], [F.half + .1, pedBase + .1, .7]].forEach(([x, y, s]) => {
+    const p = new THREE.Mesh(palmette(s), M.marble); p.position.set(x, y, F.front + .15); p.castShadow = true; statics.add(p);
+  });
+  // Escudo de bronce con corona de olivo en el tímpano, en honor a Atenea.
+  // Casquete esférico poco profundo: radio de borde .72 m.
+  const shieldY = pedBase + .95, R = 2.7, shieldBack = 6.72 - R * Math.cos(.27);
+  const shield = new THREE.Mesh(new THREE.SphereGeometry(R, compact ? 40 : 72, 8, 0, Math.PI * 2, 0, .27), M.bronze);
+  shield.rotation.x = Math.PI / 2; shield.position.set(0, shieldY, shieldBack); shield.castShadow = true; statics.add(shield);
+  [.6, .4, .16].forEach(r => { const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .024, 8, 64), M.gilt); ring.position.set(0, shieldY, shieldBack + Math.sqrt(R * R - r * r) + .005); statics.add(ring); });
+  for (let i = 0; i < 24; i++) {
+    const a = Math.PI * (-.12 + 1.24 * i / 23), leaf = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), M.gilt);
+    leaf.scale.set(.5, 1.5, .3); leaf.position.set(Math.cos(a) * .86, shieldY + Math.sin(a) * .86, 6.76); leaf.rotation.z = a + (i % 2 ? .65 : -.65); statics.add(leaf);
+  }
+  // Inscripción tallada en el arquitrabe: el nombre del autor, no un título del museo.
+  const inscription = canvasTex(2048, 128, (g, w, h) => {
+    g.clearRect(0, 0, w, h); g.textAlign = 'center'; g.font = '600 76px "Cinzel", "Trajan Pro", Georgia, serif';
+    const text = 'JOSÉ · MIGUEL · MIRALLES · GANDIA';
+    if (g.letterSpacing !== undefined) g.letterSpacing = '14px';
+    g.fillStyle = 'rgba(255,240,214,.55)'; g.fillText(text, w / 2, 90);        // arista iluminada
+    g.fillStyle = 'rgba(38,28,18,.92)'; g.fillText(text, w / 2, 87);           // fondo del surco
+  }, { text: true });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(13, .82), new THREE.MeshStandardMaterial({ map: inscription, transparent: true, roughness: .9, depthWrite: false }));
+  sign.position.set(0, F.top + .4, F.front - .035); scene.add(sign);
+  // Techo del pórtico con pequeños casetones.
+  for (let x = -8.4; x <= 8.4; x += 1.4) box(.16, .22, 3.2, x, F.top - .11, 5.05, M.marble);
+  for (let z = 4.2; z <= 6.4; z += 1.1) box(17.4, .22, .16, 0, F.top - .11, z, M.marble);
+  box(17.6, .1, 3.4, 0, F.top + .02, 5.05, M.coffer);
+
+  /* ---------- Interior: columnata ---------- */
+  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => column(s * 5.05, z, { height: 6.4, r: .4 }));
+  // Pilastras (antas) en los muros, frente a cada columna.
+  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => box(.16, 6.4, .8, s * (HALL.x - .08), 3.2, z, M.marble));
+  box(12.8, HALL.top, .4, 0, HALL.top / 2, HALL.end, M.wall);
+  box(12, 1.15, .1, 0, .575, HALL.end + .25, M.darkStone);
+  box(12, .56, .26, 0, 6.68, HALL.end + .33, M.marble); box(12, .58, .18, 0, 7.32, HALL.end + .29, M.marbleWarm); box(12, .26, .5, 0, 7.74, HALL.end + .45, M.marble);
+
+  /* ---------- Techo de casetones con lucernarios ---------- */
+  const sunDir = new THREE.Vector3(...SUN_OFFSET).normalize();
+  // Un lucernario por sala, centrado en la retícula; el haz cae por detrás de cada urna.
+  const skylights = [-4, -16, -28].map(z => ({ x: -2, z }));
+  const isOpen = (cx, cz) => skylights.some(s => Math.abs(cx - s.x) <= 1.01 && Math.abs(cz - s.z) <= 1.01);
+  const CY = HALL.top;
+  for (let x = -6; x <= 6; x += 2) box(.3, .5, HALL.start - HALL.end, x, CY + .25, wallZ, M.marble);
+  for (let z = HALL.start - .05; z >= HALL.end; z -= 2) box(12, .5, .3, 0, CY + .25, z, M.marble);
+  const starShape = new THREE.Shape();
+  for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? .07 : .2; const fn = i ? 'lineTo' : 'moveTo'; starShape[fn](Math.cos(a) * r, Math.sin(a) * r); }
+  const starGeo = new THREE.ShapeGeometry(starShape); starGeo.rotateX(Math.PI / 2);
+  for (let cx = -5; cx <= 5; cx += 2) for (let cz = HALL.start - 1.05; cz > HALL.end; cz -= 2) {
+    if (isOpen(cx, cz)) continue;
+    // Dos marcos escalonados y el fondo azul con estrella dorada.
+    [[1.7, 1.3, .14, CY + .57], [1.3, .96, .12, CY + .7]].forEach(([size, inner, t, y]) => {
+      const bw = (size - inner) / 2;
+      [-1, 1].forEach(s => { box(size, t, bw, cx, y, cz + s * (size / 2 - bw / 2), M.marble); box(bw, t, inner, cx + s * (size / 2 - bw / 2), y, cz, M.marble); });
+    });
+    box(1.15, .06, 1.15, cx, CY + .8, cz, M.coffer);
+    const star = new THREE.Mesh(starGeo, M.gilt); star.position.set(cx, CY + .765, cz); star.castShadow = false; statics.add(star);
+  }
+  // Pozos de luz sobre los lucernarios y un haz de luz suave.
+  const shafts = [];
+  const shaftMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+    uniforms: { uColor: { value: new THREE.Color('#ffd9a6') }, uStrength: { value: compact ? .07 : .09 }, uTime: { value: 0 } },
+    vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vec4 mv=modelViewMatrix*vec4(position,1.); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }',
+    fragmentShader: `uniform vec3 uColor; uniform float uStrength; uniform float uTime; varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main(){ float edge=sin(3.14159*fract(vUv.x*4.)); float fall=smoothstep(0.,.35,vUv.y)*mix(.35,1.,vUv.y);
+        float facing=pow(abs(dot(vN,vV)),.8); float motes=.85+.15*sin(vUv.y*40.+uTime*.6+vUv.x*12.);
+        float a=edge*fall*facing*motes*uStrength; gl_FragColor=vec4(uColor*a,a); }`
+  });
+  skylights.forEach(s => {
+    [-1, 1].forEach(k => { box(4, 1.6, .25, s.x, CY + 1.3, s.z + k * 2.1, M.wall); box(.25, 1.6, 4, s.x + k * 2.1, CY + 1.3, s.z, M.wall); });
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({ color: '#f5dcb4', fog: false }));
+    glow.rotation.x = Math.PI / 2; glow.position.set(s.x, CY + 2.05, s.z); glow.castShadow = false; scene.add(glow);
+    const len = (CY + 1.6) / sunDir.y;
+    const geo = new THREE.CylinderGeometry(2.4, 2.75, len, 4, 1, true); geo.rotateY(Math.PI / 4); geo.translate(0, -len / 2, 0);
+    const beam = new THREE.Mesh(geo, shaftMat); beam.position.set(s.x, CY + 1.6, s.z);
+    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), sunDir); scene.add(beam); shafts.push(beam);
+  });
+
+  /* ---------- Portadas y puertas de bronce ---------- */
+  const doors = [];
+  const leafMat = M.bronzeVariant(17, '#a88d70', .66);
+  function portal(z, width, height, front = false) {
+    const half = width / 2;
+    // Marco de tres fajas como un arquitrabe jónico, con cornisa sobre el dintel.
+    for (let layer = 0; layer < 3; layer++) {
+      const o = layer * .1, zz = z + (front ? .36 : .2) + layer * .045;
+      [-1, 1].forEach(side => box(.12, height + .4 + o, .12, side * (half + .3 + o), (height + .4 + o) / 2, zz, M.marble));
+      box(width + .72 + o * 2, .12, .12, 0, height + .4 + o, zz, M.marble);
+    }
+    box(width + 1.6, .14, .5, 0, height + .78, z + .2, M.marble);
+    box(width + 1.8, .1, .62, 0, height + .9, z + .22, M.marble);
+    [-1, 1].forEach(side => box(.32, height + .25, .5, side * (half + .16), (height + .25) / 2, z, M.marble));
+    box(width + .9, .34, .55, 0, height + .17, z, M.marble);
+    box(width + .5, .05, .7, 0, .025, z, M.marbleGrey);
+    if (!front) {
+      const sideW = HALL.x - half - .32;
+      [-1, 1].forEach(side => { box(sideW, HALL.top, .36, side * (half + .32 + sideW / 2), HALL.top / 2, z, M.wall); box(sideW, 1.15, .46, side * (half + .32 + sideW / 2), .575, z, M.darkStone); });
+      box(width + .64, HALL.top - height - .34, .36, 0, (HALL.top + height + .34) / 2, z, M.wall);
+    }
+    const hinges = [];
+    [-1, 1].forEach(side => {
+      const pivot = new THREE.Group(); pivot.userData.movingDoor = true; pivot.position.set(side * half, 0, z); scene.add(pivot);
+      const center = -side * half / 2;
+      box(half - .02, height, .2, center, height / 2, 0, leafMat, pivot);
+      [.25, .75].forEach(f => {
+        const pw = half - .4, ph = height * .38, y = height * f;
+        box(pw + .1, ph + .1, .05, center, y, .12, M.gilt, pivot);
+        box(pw - .04, ph - .04, .07, center, y, .14, leafMat, pivot);
+        // Clavos de bronce en retícula y roseta central.
+        for (let i = -1; i <= 1; i++) for (let j = -2; j <= 2; j++) if (i || j) { const n = new THREE.Mesh(new THREE.SphereGeometry(.028, 8, 6), M.gilt); n.position.set(center + i * pw * .32, y + j * ph * .2, .19); pivot.add(n); }
+        const ros = new THREE.Mesh(new THREE.TorusGeometry(.13, .025, 8, 32), M.gilt); ros.position.set(center, y, .19); pivot.add(ros);
+        for (let p = 0; p < 8; p++) { const a = p * Math.PI / 4, leaf = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), M.gilt); leaf.scale.set(.6, 1.7, .5); leaf.position.set(center + Math.sin(a) * .075, y + Math.cos(a) * .075, .2); leaf.rotation.z = -a; pivot.add(leaf); }
       });
-      const handleX=-side*(half-.21);
-      box(.12,.34,.055,handleX,height*.49,.17,bronze,pivot);
-      const handle=new THREE.Mesh(new THREE.TorusGeometry(.105,.018,12,40),bronze);handle.position.set(handleX,height*.48,.255);pivot.add(handle);
-      [.8,height-.8].forEach(y=>{
-        const hinge=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.28,12),bronze);hinge.position.set(0,y,.05);pivot.add(hinge);
-      });
-      // Cada hoja gira como dos superficies agrupadas, en lugar de decenas de piezas.
+      const hx = -side * (half - .22);
+      box(.13, .36, .05, hx, height * .49, .13, M.gilt, pivot);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.11, .02, 10, 36), M.gilt); ring.position.set(hx, height * .47, .2); pivot.add(ring);
+      // Cada hoja se agrupa por material para moverse como dos o tres mallas.
       pivot.updateMatrixWorld(true);
-      const leafBatches=new Map();
-      [...pivot.children].forEach(mesh=>{
-        if(!leafBatches.has(mesh.material))leafBatches.set(mesh.material,[]);
-        leafBatches.get(mesh.material).push(mesh);
+      const groups = new Map();
+      [...pivot.children].forEach(m => { if (!groups.has(m.material)) groups.set(m.material, []); groups.get(m.material).push(m); });
+      groups.forEach((meshes, material) => {
+        const geos = meshes.map(m => (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrix));
+        geos.forEach(g => worldUV(g, .8));
+        const geo = mergeGeometries(geos, false); geos.forEach(g => g.dispose()); if (!geo) return;
+        meshes.forEach(m => pivot.remove(m)); const merged = new THREE.Mesh(geo, material); merged.castShadow = merged.receiveShadow = true; pivot.add(merged);
       });
-      leafBatches.forEach((meshes,material)=>{
-        const geometries=meshes.map(m=>(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(m.matrix));
-        const geometry=mergeGeometries(geometries,false);geometries.forEach(g=>g.dispose());
-        if(!geometry)return;
-        meshes.forEach(m=>pivot.remove(m));const merged=new THREE.Mesh(geometry,material);merged.castShadow=true;merged.receiveShadow=true;pivot.add(merged);
+      hinges.push({ pivot, side });
+    });
+    doors.push({ z, hinges, angle: 0 });
+  }
+  portal(F.wallZ, 4.6, 5.8, true); portal(-11, 6.6, 6.45); portal(-23, 6.6, 6.45);
+
+  /* ---------- Cielo crepuscular y montañas lejanas ---------- */
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(75, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: `varying vec3 vP;
+      float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+      void main(){ float y=vP.y; vec3 zen=vec3(.035,.06,.09), mid=vec3(.12,.15,.19), hor=vec3(.55,.33,.2);
+        vec3 c=mix(hor,mid,smoothstep(-.02,.22,y)); c=mix(c,zen,smoothstep(.2,.8,y));
+        float a=atan(vP.z,vP.x); float cl=n(vec2(a*6.,y*14.))*.6+n(vec2(a*14.,y*30.))*.4;
+        c=mix(c,c*1.35+vec3(.05,.03,.02),smoothstep(.55,.85,cl)*smoothstep(.02,.15,y)*(1.-smoothstep(.25,.5,y)));
+        float sun=pow(max(0.,dot(vP,normalize(vec3(-.55,.08,.35)))),24.); c+=vec3(1.,.55,.25)*sun*.6;
+        gl_FragColor=vec4(c,1.);
+        #include <colorspace_fragment>
+      }`
+  }));
+  sky.renderOrder = -10; scene.add(sky);
+  const hills = canvasTex(2048, 256, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    [['#2a2f36', .55, 3], ['#1b1f25', .72, 7]].forEach(([c, base, seed]) => {
+      g.fillStyle = c; g.beginPath(); g.moveTo(0, h);
+      for (let x = 0; x <= w; x += 8) { const t = x / w * Math.PI * 2; g.lineTo(x, h * (base - .22 * Math.abs(Math.sin(t * 3 + seed)) - .1 * Math.sin(t * 11 + seed * 2) - .04 * Math.sin(t * 37))); }
+      g.lineTo(w, h); g.fill();
+    });
+  });
+  const ridge = new THREE.Mesh(new THREE.CylinderGeometry(68, 68, 16, 64, 1, true), new THREE.MeshBasicMaterial({ map: hills, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  ridge.position.y = 4; ridge.renderOrder = -9; scene.add(ridge);
+
+  /* ---------- Luces ---------- */
+  const sun = new THREE.DirectionalLight('#ffd7a8', 3.2);
+  sun.position.set(SUN_OFFSET[0], SUN_OFFSET[1], SUN_OFFSET[2] - 14); sun.target.position.set(0, 0, -14); scene.add(sun, sun.target);
+  sun.castShadow = true; const map = compact ? 1024 : 2048; sun.shadow.mapSize.set(map, map);
+  Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 30, bottom: -30, near: 1, far: 70 });
+  sun.shadow.normalBias = .03; sun.shadow.bias = -.0004; sun.shadow.radius = 3;
+  // Luz de cielo fría para que la sombra nunca sea negra; tono de piedra en el rebote.
+  scene.add(new THREE.HemisphereLight('#a9bccd', '#5a4636', .32));
+  const bounce = new THREE.DirectionalLight('#b88a62', .22); bounce.position.set(4, -2, -20); scene.add(bounce);
+
+  /* ---------- Agrupación de la arquitectura estática por material ---------- */
+  statics.updateMatrixWorld(true);
+  const batches = new Map();
+  statics.traverse(mesh => { if (!mesh.isMesh) return; if (!batches.has(mesh.material)) batches.set(mesh.material, []); batches.get(mesh.material).push(mesh); });
+  batches.forEach((meshes, material) => {
+    const scale = uvScale.get(material) || [.5, .5];
+    const geos = meshes.map(m => { const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrixWorld); if (!m.userData.keepUV) worldUV(g, scale); return g; });
+    const geo = mergeGeometries(geos, false); geos.forEach(g => g.dispose()); if (!geo) return;
+    const merged = new THREE.Mesh(geo, material); merged.castShadow = true; merged.receiveShadow = true; scene.add(merged);
+  });
+  scene.remove(statics);
+
+  return {
+    sun, skylights, box, column, contactShadow,
+    update(camera, dt, reduce, t) {
+      sky.position.copy(camera.position); ridge.position.set(camera.position.x, 4, camera.position.z);
+      shaftMat.uniforms.uTime.value = t || 0;
+      doors.forEach(d => {
+        const progress = smootherStep((d.z + 14 - camera.position.z) / 11);
+        const target = progress * Math.PI * .48;
+        d.angle = reduce ? target : THREE.MathUtils.damp(d.angle, target, 3.8, dt);
+        d.hinges.forEach(({ pivot, side }) => pivot.rotation.y = side * d.angle);
       });
-      hinges.push({pivot,side});
-    });
-    doors.push({z,hinges,angle:0});
-  }
-  portal(3.8,4.6,5.8,true);portal(-11,6.6,6.45);portal(-23,6.6,6.45);
-  const sun=new THREE.DirectionalLight('#ffdfac',2.1);sun.position.set(-12,18,14);sun.target.position.set(0,0,-8);scene.add(sun,sun.target);
-  sun.castShadow=true;sun.shadow.mapSize.set(compact?1024:2048,compact?1024:2048);sun.shadow.radius=4;sun.shadow.blurSamples=8;sun.shadow.camera.left=-13;sun.shadow.camera.right=13;sun.shadow.camera.top=18;sun.shadow.camera.bottom=-18;sun.shadow.camera.far=65;sun.shadow.normalBias=.035;sun.shadow.bias=-.0003;
-  const fill=new THREE.DirectionalLight('#8eafd2',.4);fill.position.set(6,9,-20);scene.add(fill);
-  scene.add(new THREE.HemisphereLight('#c8d5e4','#29211c',.38));
-  for(const z of [-5.2,-17.2,-29.2]) {
-    const glow=new THREE.PointLight('#ed8f49',compact?5:8,10,2);glow.position.set(3.8,3.7,z+1);scene.add(glow);
-  }
-  const inscription=canvasTex(1024,128,(g,w,h)=>{g.clearRect(0,0,w,h);g.fillStyle='#d8b881';g.font='500 56px Georgia';g.textAlign='center';g.fillText('M U S E O   J O S E M I',w/2,82);});
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(5.2,.65),new THREE.MeshBasicMaterial({map:inscription,transparent:true}));sign.position.set(0,6.28,5.22);scene.add(sign);
-  // Agrupa la arquitectura inmóvil por material para reducir trabajo de la GPU.
-  scene.updateMatrixWorld(true);
-  const batches=new Map();
-  scene.traverse(mesh=>{
-    if(!mesh.isMesh || mesh.material.transparent)return;
-    for(let parent=mesh.parent;parent;parent=parent.parent)if(parent.userData.movingDoor)return;
-    const key=mesh.material;
-    if(!batches.has(key))batches.set(key,[]);
-    batches.get(key).push(mesh);
-  });
-  batches.forEach((meshes,material)=>{
-    if(meshes.length<2)return;
-    const geometries=meshes.map(m=>(m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()).applyMatrix4(m.matrixWorld));
-    const geometry=mergeGeometries(geometries,false);
-    geometries.forEach(g=>g.dispose());
-    if(!geometry)return;
-    meshes.forEach(m=>m.parent.remove(m));
-    const merged=new THREE.Mesh(geometry,material);merged.castShadow=true;merged.receiveShadow=true;scene.add(merged);
-  });
-  return { update(camera,dt,reduce) {
-    doors.forEach(d=>{
-      const progress=smootherStep((d.z+14-camera.position.z)/11);
-      const target=progress*Math.PI*.48;
-      d.angle=reduce?target:THREE.MathUtils.damp(d.angle,target,3.8,dt);
-      d.hinges.forEach(({pivot,side})=>pivot.rotation.y=side*d.angle);
-    });
-  }};
+    }
+  };
 }

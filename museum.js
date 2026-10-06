@@ -6,6 +6,10 @@ import { createMotionRenderer } from './cinematic.js';
 import { addMythology } from './mythology.js';
 import { createFreeCamera } from './free-camera.js';
 import { createGreekMuseum } from './greek-temple.js';
+import { createMaterials } from './materials.js';
+import { createFires } from './fire.js';
+import { createPottery } from './pottery.js';
+import { createAthena } from './athena.js';
 
 const root = document.documentElement;
 let savedMotion=null;try{savedMotion=localStorage.getItem('museo-motion');}catch{}
@@ -46,7 +50,7 @@ const FICHAS = [
 /* ---------- Recorrido: paradas de cámara ---------- */
 // Cada parada: posición de cámara, punto al que mira y cuánto scroll se queda quieta.
 const STOPS = [
-  { name: 'Entrada',  pos: [0, 3.1, 21],     look: [0, 3.6, 3.8],   hold: .25 },
+  { name: 'Entrada',  pos: [0, 2.7, 24],     look: [0, 4.7, 3.8],   hold: .25 },
   { name: 'Sala I',   pos: [.9, 1.55, -1.2], look: [0, 1.45, -5.2], hold: 1.1 },
   { name: 'Pasillo',  pos: [-.4, 1.7, -10], look: [0, 1.5, -18],  hold: 0, pass: true },
   { name: 'Sala II',  pos: [-.9, 1.55, -13.2], look: [0, 1.45, -17.2], hold: 1.1 },
@@ -65,7 +69,8 @@ function frameRoute() {
       s.pos = [0, 2.35, s.look[2] + 5.4]; s.look = [0, .55, s.look[2]];
     }
   });
-  if (small) STOPS[0].pos = [0, 3.5, 29.5];
+  // En vertical la Sala I gira un poco hacia Atenea para que urna y escultura compartan encuadre.
+  if (small) { STOPS[1].pos = [.35, 2.7, 1.9]; STOPS[1].look = [-.95, .15, -6.2]; STOPS[0].pos = [0, 3.6, 41]; STOPS[0].look = [0, 5.4, 3.8]; }
 }
 frameRoute();
 const MAIN = STOPS.map((s, i) => s.pass ? -1 : i).filter(i => i >= 0); // índices de paradas reales
@@ -115,21 +120,22 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, small ? 1.35 : 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.VSMShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#18212b');
-scene.fog = new THREE.Fog('#18212b', 24, 65);
+scene.background = new THREE.Color('#141518');
+// Niebla cálida y lejana: da aire a la nave sin ocultar las salas.
+scene.fog = new THREE.Fog('#2a2620', 30, 78);
 // Reflejos suaves en bronce, cristal y piedra, sin descargar un HDR pesado.
 const pmrem = new THREE.PMREMGenerator(renderer);
 const reflectionRoom = new RoomEnvironment();
 const reflectionTarget = pmrem.fromScene(reflectionRoom, .025);
 scene.environment = reflectionTarget.texture;
-scene.environmentIntensity = .22;
+scene.environmentIntensity = .14;
 reflectionRoom.dispose(); pmrem.dispose();
-const camera = new THREE.PerspectiveCamera(small ? 62 : 50, innerWidth / innerHeight, .1, 80);
+const camera = new THREE.PerspectiveCamera(small ? 62 : 50, innerWidth / innerHeight, .1, 90);
 camera.position.set(...STOPS[0].pos);
 
 
@@ -145,41 +151,49 @@ function canvasTex(w, h, draw, opts = {}) {
   t.userData = { canvas: c, ctx: g };
   return t;
 }
-const architecture = createGreekMuseum(THREE, scene, canvasTex, small);
-const mythology = addMythology(THREE,scene,canvasTex,small);
+const M = createMaterials(THREE, { compact: small });
+const architecture = createGreekMuseum(THREE, scene, canvasTex, small, M);
+const mythology = addMythology(THREE, scene, canvasTex, small, M);
+const fires = createFires(THREE, scene, M, { compact: small, canvasTex });
+createPottery(THREE, scene, M, { compact: small, contactShadow: architecture.contactShadow });
+const athena = createAthena(THREE, scene, M, { compact: small, renderer, contactShadow: architecture.contactShadow });
 const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact:small,reduce});
 
 /* Textos de pared: rótulos de sala pintados sobre el muro */
-function wallText(lines, { w = 4, h = 1.6, size = 150, color = '#524638', sub, align = 'left' } = {}) {
+// Letras grabadas en la piedra: surco oscuro con una arista de luz debajo.
+function wallText(lines, { w = 4, h = 1.6, size = 150, color = 'rgba(46,34,24,.9)', sub, align = 'left', gilt = false } = {}) {
   const tex = canvasTex(1024, 410, (g, W, H) => {
-    g.clearRect(0, 0, W, H); g.fillStyle = color; g.textAlign = align; g.textBaseline = 'alphabetic';
+    g.clearRect(0, 0, W, H); g.textAlign = align; g.textBaseline = 'alphabetic';
     const x = align === 'left' ? 10 : W / 2;
-    if (sub) { g.font = '500 30px "JetBrains Mono", monospace'; g.fillStyle = '#c9a46a'; g.fillText(sub.toUpperCase().split('').join(' '), x, 46); g.fillStyle = color; }
-    g.font = `900 ${size}px "Big Shoulders Display", "Arial Narrow", sans-serif`;
-    lines.forEach((l, i) => g.fillText(l.toUpperCase(), x, (sub ? 70 : 0) + size * .86 * (i + 1)));
+    if (sub) { g.font = '600 26px "Instrument Sans", sans-serif'; g.fillStyle = '#9a7445'; g.fillText(sub.toUpperCase().split('').join(' '), x, 46); }
+    g.font = `600 ${size}px "Cinzel", "Trajan Pro", Georgia, serif`;
+    lines.forEach((l, i) => {
+      const y = (sub ? 70 : 0) + size * 1.02 * (i + 1) - size * .12;
+      if (!gilt) { g.fillStyle = 'rgba(255,242,220,.45)'; g.fillText(l.toUpperCase(), x, y + 3); }
+      g.fillStyle = color; g.fillText(l.toUpperCase(), x, y);
+    });
   }, { text: true });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h * 410 / 410), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: .8 }));
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h * 410 / 410), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: .85, depthWrite: false }));
   m.userData.tex = tex; return m;
 }
 
 /* ---------- Urnas ---------- */
 const urns = [];
 const glassMat = new THREE.MeshStandardMaterial({ color: '#c3d5db', roughness: .22, metalness: .08, transparent: true, opacity: .07, envMapIntensity: .35, side: THREE.FrontSide, depthWrite: false });
-const plinthMat = new THREE.MeshStandardMaterial({ color: '#e8e2d8', roughness: .55 });
 
 function addSpot(x, z, color, intensity, target) {
-  const spot = new THREE.SpotLight(color, intensity, 14, Math.PI / 9, .55, 1.4);
-  spot.position.set(x, 6.8, z + 1.4); spot.target = target; spot.castShadow = false;
+  const spot = new THREE.SpotLight(color, intensity, 14, Math.PI / 10, .6, 1.4);
+  spot.position.set(x, 7.6, z + 1.4); spot.target = target; spot.castShadow = false;
   spot.shadow.mapSize.set(1024, 1024); spot.shadow.radius = 2; spot.shadow.blurSamples = 6; spot.shadow.bias = -.0004; scene.add(spot); scene.add(spot.target);
   // cono volumétrico falso
   const coneH = 5.4;
   const cone = new THREE.Mesh(new THREE.ConeGeometry(1.25, coneH, 48, 1, true), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    uniforms: { uColor: { value: new THREE.Color(color) }, uStrength: { value: .16 } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uStrength: { value: .07 } },
     vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = uv.y; vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
     fragmentShader: 'uniform vec3 uColor; uniform float uStrength; varying float vY; varying vec3 vN; varying vec3 vV; void main(){ float rim = pow(abs(dot(vN, vV)), 1.6); float a = vY * vY * rim * uStrength; gl_FragColor = vec4(uColor * a, a); }'
   }));
-  const top = new THREE.Vector3(x, 6.8, z + 1.4), bottom = target.position.clone();
+  const top = new THREE.Vector3(x, 7.6, z + 1.4), bottom = target.position.clone();
   cone.position.copy(top).lerp(bottom, .5); cone.lookAt(bottom); cone.rotateX(-Math.PI / 2);
   cone.scale.y = top.distanceTo(bottom) / coneH; scene.add(cone);
   return { spot, cone };
@@ -187,24 +201,25 @@ function addSpot(x, z, color, intensity, target) {
 
 function makeUrn({ z, accent, inner, plaque }) {
   const g = new THREE.Group(); g.position.set(0, 0, z); scene.add(g);
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.0, 1.15), plinthMat);
-  plinth.position.y = .5; plinth.castShadow = plinth.receiveShadow = true; g.add(plinth);
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(1.2, .04, 1.2), new THREE.MeshStandardMaterial({ color: '#c9c2b6', roughness: .4 }));
-  lip.position.y = 1.02; g.add(lip);
-  // base metálica del cristal
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(1.08, .05, 1.08), new THREE.MeshStandardMaterial({ color: '#2b2c30', metalness: .9, roughness: .3 }));
-  rim.position.y = 1.065; g.add(rim);
+  // Peana de mármol: zócalo gris, dado veteado y cornisa clara con filete.
+  [[1.36, .12, .06, M.marbleGrey], [1.24, .06, .15, M.marble], [1.1, .7, .53, M.marbleWarm], [1.24, .07, .915, M.marble], [1.3, .06, .975, M.marbleGrey]].forEach(([s, h, y, mat]) => {
+    const part = new THREE.Mesh(new THREE.BoxGeometry(s, h, s), mat); part.position.y = y; part.castShadow = part.receiveShadow = true; g.add(part);
+  });
+  architecture.contactShadow(0, z, 2.4);
+  // base de bronce del cristal
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(1.08, .06, 1.08), M.darkGilt);
+  rim.position.y = 1.035; rim.castShadow = true; g.add(rim);
   const glass = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 1.0), glassMat);
   glass.position.y = 1.665; glass.renderOrder = 2; g.add(glass);
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(glass.geometry), new THREE.LineBasicMaterial({ color: '#f1ebdf', transparent: true, opacity: .35 }));
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(glass.geometry), new THREE.LineBasicMaterial({ color: '#e6c48c', transparent: true, opacity: .35 }));
   edges.position.copy(glass.position); g.add(edges);
   // pieza interior
   inner.position.y = 1.62; g.add(inner);
   // luz interior de color
-  const glow = new THREE.PointLight(accent, small ? 1.2 : 2.2, 2.6, 2); glow.position.set(0, 1.5, .1); g.add(glow);
+  const glow = new THREE.PointLight(accent, small ? 0 : 2.2, 2.6, 2); glow.position.set(0, 1.5, .1); glow.visible = !small; g.add(glow);
   // cartela de latón en la peana
-  const plq = new THREE.Mesh(new THREE.PlaneGeometry(.7, .2), new THREE.MeshStandardMaterial({ map: plaque, metalness: .6, roughness: .35 }));
-  plq.position.set(0, .72, .578); g.add(plq);
+  const plq = new THREE.Mesh(new THREE.PlaneGeometry(.7, .2), new THREE.MeshStandardMaterial({ map: plaque, metalness: .7, roughness: .38 }));
+  plq.position.set(0, .66, .552); g.add(plq);
   // caja de impacto para el ratón
   const hit = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.4, 1.3), new THREE.MeshBasicMaterial({ visible: false }));
   hit.position.y = 1.2; g.add(hit);
@@ -215,10 +230,10 @@ function makeUrn({ z, accent, inner, plaque }) {
 }
 function plaqueTex(code, title) {
   return canvasTex(700, 200, (g, W, H) => {
-    const grd = g.createLinearGradient(0, 0, W, H); grd.addColorStop(0, '#b8925a'); grd.addColorStop(.5, '#e3c48f'); grd.addColorStop(1, '#a8834e');
-    g.fillStyle = grd; g.fillRect(0, 0, W, H);
-    g.fillStyle = '#2a1e0e'; g.font = '500 30px "JetBrains Mono", monospace'; g.fillText(code, 34, 62);
-    g.font = '900 78px "Big Shoulders Display", "Arial Narrow", sans-serif'; g.fillText(title.toUpperCase(), 32, 150);
+    const grd = g.createLinearGradient(0, 0, W, H); grd.addColorStop(0, '#9a7444'); grd.addColorStop(.5, '#c9a46a'); grd.addColorStop(1, '#8b6a3e');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(40,26,12,.6)'; g.lineWidth = 4; g.strokeRect(10, 10, W - 20, H - 20);
+    g.fillStyle = '#2a1c0c'; g.font = '600 26px "Instrument Sans", sans-serif'; g.fillText(code.split('').join(' '), 34, 60);
+    g.font = '600 64px "Cinzel", Georgia, serif'; g.fillText(title.toUpperCase(), 32, 148);
   }, { text: true });
 }
 
@@ -323,31 +338,34 @@ U1.ficha = 0; U2.ficha = 1; U3.ficha = -1;
 
 /* Rótulos de sala en los muros */
 const rooms = [
-  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -5.6, x: -5.79 },
-  { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', z: -17.6, x: 5.79 },
-  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -29.6, x: -5.79 }
+  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -6, x: -5.79 },
+  { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', z: -18, x: 5.79 },
+  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -30, x: -5.79 }
 ];
 rooms.forEach(r => {
-  const t = wallText(r.lines, { w: 5, h: 2, size: 140, sub: r.sub + ' · colección permanente' });
-  t.position.set(r.x, 3.4, r.z); t.rotation.y = r.x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(t);
+  const t = wallText(r.lines, { w: 4.8, h: 1.92, size: 112, sub: r.sub + ' · colección permanente' });
+  t.position.set(r.x > 0 ? 5.89 : -5.89, 3.55, r.z); t.rotation.y = r.x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(t);
 });
 // cuadros en los muros: lienzos abstractos con luz rasante
 /* Muro final: neón de contacto */
-const neon = wallText(['Gracias por', 'la visita'], { w: 6, h: 2.4, size: 150, color: '#f6e7cc', align: 'center' });
-neon.material = new THREE.MeshBasicMaterial({ map: neon.userData.tex, transparent: true, toneMapped: false, color: new THREE.Color('#ffd9a0').multiplyScalar(1.4) });
-neon.position.set(0, 5.2, -45.75); neon.visible = !small; scene.add(neon);
-const neonGlow = new THREE.PointLight('#ffb866', 12, 10, 1.5); neonGlow.position.set(0, 3, -44.5); scene.add(neonGlow);
-// banco del museo frente a la salida
-const bench = new THREE.Mesh(new THREE.BoxGeometry(2.4, .42, .6), new THREE.MeshStandardMaterial({ color: '#3b2f25', roughness: .6 }));
-bench.position.set(0, .21, -40); bench.castShadow = !small; scene.add(bench);
+const neon = wallText(['Gracias por', 'la visita'], { w: 6, h: 2.4, size: 120, color: '#e9c98f', align: 'center', gilt: true });
+neon.material = new THREE.MeshStandardMaterial({ map: neon.userData.tex, transparent: true, depthWrite: false, metalness: .6, roughness: .35, emissive: '#7a4a18', emissiveMap: neon.userData.tex, emissiveIntensity: .35 });
+neon.position.set(0, 4.9, -45.97); neon.visible = !small; scene.add(neon);
+const neonGlow = new THREE.PointLight('#ffb866', 9, 11, 1.5); neonGlow.position.set(0, 3.2, -43.6); scene.add(neonGlow);
+// Banco de mármol frente a la salida, sobre dos patas con voluta.
+const bench = new THREE.Group(); bench.position.set(0, 0, -40); scene.add(bench);
+[[2.6, .1, .7, .47, M.marble], [.16, .42, .56, .21, M.marbleGrey]].forEach(([w, h, d, y, mat], i) => {
+  (i ? [-1.05, 1.05] : [0]).forEach(x => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, 0); m.castShadow = m.receiveShadow = true; bench.add(m); });
+});
+architecture.contactShadow(0, -40, 3.2, 1.4);
 
 /* Motas de polvo en el aire */
-const DUST = small ? 500 : 1400;
+const DUST = small ? 350 : 900;
 const dustGeo = new THREE.BufferGeometry(); const dp = new Float32Array(DUST * 3);
 for (let i = 0; i < DUST; i++) { dp[i * 3] = (Math.random() - .5) * 11; dp[i * 3 + 1] = Math.random() * 6.5; dp[i * 3 + 2] = 8 - Math.random() * 54; }
 dustGeo.setAttribute('position', new THREE.BufferAttribute(dp, 3));
 const dotTex = canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
-const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#ffe6c2', map: dotTex, size: .03, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending }));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#ffe6c2', map: dotTex, size: .028, transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending }));
 scene.add(dust);
 
 /* ---------- Interfaz ---------- */
@@ -482,7 +500,8 @@ function loop() {
     camera.lookAt(camLook.x+mouse.x*.2*par,camLook.y+mouse.y*.12*par,camLook.z);
     canvas.dataset.cameraMode='recorrido';
   }
-  architecture.update(camera,dt,reduce);
+  architecture.update(camera,dt,reduce,t);
+  fires.update(t,camera,reduce);
 
   urns.forEach((u, i) => {
     const d = u.inner.userData;
@@ -492,11 +511,10 @@ function loop() {
     if (d.wire) d.wire.material.opacity = reduce ? .7 : .45 + .4 * Math.abs(Math.sin(t * 1.2));
     const isHover = hovered === u;
     u.edges.material.opacity += ((isHover ? .9 : .35) - u.edges.material.opacity) * .12;
-    u.glow.intensity += (((isHover ? 4 : 2.2) * (small ? .6 : 1)) - u.glow.intensity) * .1;
+    u.glow.intensity += ((isHover ? 4 : 2.2) - u.glow.intensity) * .1;
   });
   screenAcc += dt; if (screenAcc > 1 / 24) { drawScreen(t); screenAcc = 0; }
   if (!reduce) { const p = dustGeo.attributes.position; for (let i = 0; i < DUST; i++) { let y = p.array[i * 3 + 1] + dt * .04 * ((i % 7) - 3) * .3; if (y > 6.5) y = 0; if (y < 0) y = 6.5; p.array[i * 3 + 1] = y; } p.needsUpdate = true; }
-  neon.material.color.setScalar(reduce ? 1.25 : 1.25 + (Math.sin(t * 13) > .97 ? -.6 : 0) + Math.sin(t * 2) * .05);
 
   // hover sobre urnas
   if (finePointer && !dlg.open) {
@@ -537,7 +555,8 @@ addEventListener('resize', () => {
 
 /* ---------- Telón de carga ---------- */
 const count = document.getElementById('count');
-const fontsReady = document.fonts ? document.fonts.ready : Promise.resolve();
+// Los lienzos solo usan una fuente web si ya está cargada: se piden de forma explícita.
+const fontsReady = document.fonts ? Promise.all(['600 64px "Cinzel"', '500 22px "Cinzel"', 'italic 500 24px "Cormorant Garamond"', '600 26px "Instrument Sans"', '17px "JetBrains Mono"'].map(f => document.fonts.load(f).catch(() => {}))).then(() => document.fonts.ready) : Promise.resolve();
 let shown = 0; const start = performance.now();
 const tick = () => {
   const elapsed = performance.now() - start;
@@ -548,7 +567,10 @@ const tick = () => {
 tick();
 Promise.race([fontsReady, new Promise(r => setTimeout(r, 2500))]).then(() => {
   // redibuja los rótulos ya con las fuentes cargadas
-  TEXTS.forEach(redraw => redraw());
+  TEXTS.forEach(redraw => redraw()); athena.redrawLabel();
+  // La escultura se espera unos segundos; si la red va lenta aparece en cuanto llegue.
+  return Promise.race([athena.ready, new Promise(r => setTimeout(r, 6000))]);
+}).then(() => {
   renderer.compile(scene, camera);
   const wait = Math.max(0, (reduce ? 400 : 1250) - (performance.now() - start));
   setTimeout(() => { shown = 100; count.textContent = '100'; clearTimeout(window.museumLoadTimer); root.classList.remove('no-webgl'); root.classList.add('ready'); }, wait);
