@@ -1,28 +1,35 @@
-/** Dioses del museo: una escultura protagonista por sala (Atenea, Hermes y Hefesto) y la Atenea guerrera
- *  escaneada junto a la entrada de la Sala I. Cada pieza tiene pedestal con inscripción griega, luz propia
- *  y una zona invisible para abrir su ficha. */
+/** Dioses del museo: una escultura protagonista por sala (busto de Atenea, Hermes y Hefesto).
+ *  Cada pieza tiene pedestal con inscripción griega, luz propia y una zona invisible para abrir su ficha. */
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/DRACOLoader.js';
 
 export const GODS = [
-  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -2.8, z: -7.9, rot: .48, height: 1.5, plinth: 1.0, kind: 'sculpt', src: 'assets/atenea-sabiduria/atenea', hero: true },
+  // Busto monumental: el rostro lleva pintado el trazo del retrato de referencia, como la policromía de las estatuas griegas.
+  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -2.8, z: -7.9, rot: .48, height: 2.25, plinth: 1.15, kind: 'sculpt', src: 'assets/atenea-busto/atenea', paint: 'assets/atenea-busto/rostro.png', hero: true },
   { id: 'hermes', greek: 'ΕΡΜΗΣ', motto: 'Mensajero de los dioses', x: -2.8, z: -19.9, rot: .48, height: 2.45, plinth: 1.0, kind: 'scan', src: 'assets/hermes/hermes', hero: true },
   { id: 'hefesto', greek: 'ΗΦΑΙΣΤΟΣ', motto: 'El herrero del Olimpo', x: -2.8, z: -31.9, rot: .48, height: 1.42, plinth: 1.0, kind: 'sculpt', src: 'assets/hefesto/hefesto', hero: true }
 ];
 
 /* Mármol sin UV: se proyecta la textura veteada desde las tres direcciones del espacio. */
-function triplanar(THREE, material, map, scale = 1.6) {
+function triplanar(THREE, material, map, scale = 1.6, paint = null) {
+  if (paint) material.defines = { ...(material.defines || {}), USE_UV: '' };
   material.onBeforeCompile = shader => {
     shader.uniforms.marbleMap = { value: map }; shader.uniforms.marbleScale = { value: scale };
+    if (paint) { shader.uniforms.faceMap = { value: paint.map }; shader.uniforms.faceDir = { value: paint.dir }; }
     shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWorldPos; varying vec3 vWorldN;')
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldPos = (modelMatrix * vec4(transformed, 1.)).xyz; vWorldN = normalize(mat3(modelMatrix) * objectNormal);');
     shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D marbleMap; uniform float marbleScale; varying vec3 vWorldPos; varying vec3 vWorldN;')
       .replace('#include <color_fragment>', `#include <color_fragment>
         vec3 bw = pow(abs(vWorldN), vec3(4.)); bw /= bw.x + bw.y + bw.z;
         vec3 tri = texture2D(marbleMap, vWorldPos.zy * marbleScale).rgb * bw.x + texture2D(marbleMap, vWorldPos.xz * marbleScale).rgb * bw.y + texture2D(marbleMap, vWorldPos.xy * marbleScale).rgb * bw.z;
-        diffuseColor.rgb *= mix(vec3(1.), tri * 1.12, .85);`);
+        diffuseColor.rgb *= mix(vec3(1.), tri * 1.12, .85);${paint ? `
+        // Pigmento del retrato: solo en las caras que miran al frente, para que no se estire por los lados.
+        vec4 ink = texture2D(faceMap, vUv);
+        float facing = smoothstep(.3, .8, dot(normalize(vWorldN), faceDir));
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(.3, .25, .21), ink.a * facing * .9);` : ''}`);
+    if (paint) shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D faceMap; uniform vec3 faceDir;');
   };
-  material.customProgramCacheKey = () => 'triplanar-marble';
+  material.customProgramCacheKey = () => paint ? 'triplanar-marble-paint' : 'triplanar-marble';
   return material;
 }
 
@@ -95,7 +102,12 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
         if (!o.isMesh) return;
         o.castShadow = o.receiveShadow = true;
         if (material) o.material = material;
-        else o.material = /gold|oro/i.test(o.material.name) ? sculptGold : sculptMarble;
+        else if (/gold|oro/i.test(o.material.name)) o.material = sculptGold;
+        else if (g.paint) {
+          const map = texLoader.load(g.paint); map.flipY = false; map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          const dir = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rot);
+          o.material = triplanar(THREE, new THREE.MeshStandardMaterial({ color: '#f3ede2', roughness: .5, vertexColors: true, envMapIntensity: .8 }), M.marble.map, 1.4, { map, dir });
+        } else o.material = sculptMarble;
       });
       statue.add(gltf.scene); root.add(statue); pieces[g.id].statue = statue; resolve(statue);
     }, undefined, () => resolve(null));
@@ -114,7 +126,7 @@ export const GOD_INFO = {
       'Es mi diosa favorita. Me gusta mucho la sabiduría y la mitología griega, y Atenea reúne las dos cosas: pensar antes de actuar, aprender y crear con oficio. Por eso es el símbolo principal de este templo y preside la sala de mi primer proyecto.'
     ],
     listTitle: 'En esta sala',
-    list: ['Atenea de la sabiduría: corona de olivo, cabello ondulado y quitón con broche. Modelada para este museo a partir del retrato de referencia', 'Atenea guerrera (Promachos), con casco: escaneo 3D de una estatua clásica', 'Atributos: el búho, el olivo, la lanza y la égida']
+    list: ['Busto de Atenea modelado para este museo a partir de un retrato a lápiz: corona de laurel, cabello ondulado y himatión sujeto con un broche de oro', 'El rostro lleva pintado el trazo del retrato, como los ojos y labios pintados de las estatuas griegas', 'Atributos: el búho, el olivo, la lanza y la égida']
   },
   hermes: {
     title: 'Hermes', inv: 'Ἑρμῆς · Sala II', accent: '#8db4ff',
