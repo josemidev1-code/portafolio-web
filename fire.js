@@ -142,15 +142,14 @@ export function createFires(THREE, scene, M, { compact, canvasTex }) {
     fires.push({ root, fire, layers, smoke, embers, light: pl, base: light, coals, seed, halo, flameY, size });
   }
 
-  // Dos braseros sobre basas flanquean la escalinata.
+  // Dos braseros sobre basas flanquean la escalinata; uno en cada sala.
   brazier({ x: -6.9, z: 9.4, base: -.6, pedestal: true, size: 1, light: 9, range: 12, seed: 1.3 });
   brazier({ x: 6.9, z: 9.4, base: -.6, pedestal: true, size: 1.06, light: 9, range: 12, seed: 4.7 });
   // Brasero junto al muro grabado del ágora.
   brazier({ x: 9.4, z: 33.4, base: -.6, pedestal: true, size: .9, light: 8, range: 12, seed: 3.3 });
-  // Dentro, un brasero bajo el relieve del fondo de cada sala lo ilumina desde abajo.
-  brazier({ x: 7.5, z: -7.5, size: .8, light: 4.5, range: 8, seed: 7.9 });
-  brazier({ x: 21.4, z: -7.6, size: .8, light: 4.5, range: 8, seed: 2.2 });
-  brazier({ x: 35.4, z: -7.6, size: .8, light: 4.5, range: 8, seed: 5.6 });
+  brazier({ x: 4.25, z: -9.4, size: .8, light: 4.5, range: 8, seed: 7.9 });
+  brazier({ x: 4.25, z: -21.6, size: .8, light: 4.5, range: 8, seed: 2.2 });
+  brazier({ x: 4.25, z: -33.4, size: .8, light: 4.5, range: 8, seed: 5.6 });
 
   // Ruido 1D suave para la intensidad: varias frecuencias, sin patrón regular.
   const n1 = (t) => { const i = Math.floor(t), f = t - i, h = k => { const s = Math.sin(k * 127.1) * 43758.5453; return s - Math.floor(s); }; const u = f * f * (3 - 2 * f); return h(i) * (1 - u) + h(i + 1) * u; };

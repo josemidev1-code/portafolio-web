@@ -1,30 +1,12 @@
 /** Exterior: ágora ante el Partenón con el muro grabado del autor, y Atenas sobre las colinas al atardecer.
  *  La ciudad se dibuja con instancias (casas, tejados, cipreses y luces) para que cueste pocas llamadas de dibujo. */
 import { fbmField, rng, worldUV } from './materials.js';
-import { mergeGeometries, mergeVertices } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const WALL = { x: 8.2, z: 29.5, rot: -.95, w: 7.2, h: 4.2 };
 const PLAZA_Y = -.6;
 
-/** Ciprés: silueta de llama con masas de follaje (ruido sobre una esfera estirada) y color variado. */
-function cypressGeometry(THREE, detail, seed, height) {
-  // Vértices compartidos: así el sombreado es suave y no se ven las caras del icosaedro.
-  const geo = mergeVertices(new THREE.IcosahedronGeometry(1, detail).deleteAttribute('normal').deleteAttribute('uv')), p = geo.attributes.position, col = [];
-  const n = (x, y, z) => Math.sin(x * 5.1 + seed) * Math.sin(y * 7.3 + seed * 2) * Math.sin(z * 4.7 - seed) + .5 * Math.sin(x * 11 + y * 13 + z * 9 + seed);
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), t = (y + 1) / 2;
-    // Más ancho abajo, punta afilada arriba; los bultos marcan los mechones de ramas.
-    const prof = Math.pow(Math.sin(Math.PI * Math.min(1, t * .92 + .06)), .7) * (1 - t * .45);
-    const bump = 1 + .16 * n(x, y * 3, z);
-    p.setXYZ(i, x * prof * bump * .78, t * height, z * prof * bump * .78);
-    const g = .75 + .25 * n(x * 2, y * 4, z * 2);
-    col.push(.05 * g, .085 * g, .045 * g);
-  }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-  return geo;
-}
-
-export function createAthens(THREE, scene, M, { compact, canvasTex, contactShadow, pbr }) {
+export function createAthens(THREE, scene, M, { compact, canvasTex, contactShadow }) {
   const random = rng(4242), group = new THREE.Group(); scene.add(group);
   /* Bloques de piedra agrupados por material al final; la textura se proyecta en metros reales. */
   const UVS = new Map([[M.wall, [1 / 3.4, 1 / 1.7]], [M.marbleGrey, [.5, .5]], [M.marble, [.45, .45]], [M.marbleWarm, [.4, .4]]]);
@@ -39,8 +21,7 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
     pending.clear();
   }
   // La meseta de la Acrópolis: superelipse que abraza la plaza y el templo.
-  // Centrada a la derecha de la puerta: la galería horizontal se extiende hacia +x.
-  const AX = 54, AZ = 58, CZ = 0, OX = 20;
+  const AX = 27, AZ = 58, CZ = 0;
   const rInner = a => 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)) / AX, 4) + Math.pow(Math.abs(Math.sin(a)) / AZ, 4), .25);
 
   /* ---------- Terreno: colinas alrededor de la Acrópolis ---------- */
@@ -48,36 +29,32 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   const H = fbmField(256, { period: 4, octaves: 5, seed: 77 });
   // Fuera de la meseta el terreno cae hacia la ciudad y sube en colinas lejanas (Licabeto, Himeto).
   const height = (x, z) => {
-    const a = Math.atan2(z - CZ, x - OX), t = Math.max(0, Math.hypot(x - OX, z - CZ) - rInner(a));
+    const a = Math.atan2(z - CZ, x), t = Math.max(0, Math.hypot(x, z - CZ) - rInner(a));
     const n = H[(Math.floor((a / (Math.PI * 2) + .5) * 255) & 255) * 256 + Math.min(255, Math.floor(t / SPAN * 255))];
     return PLAZA_Y - 1.5 - 10 * Math.min(1, t / 22) + Math.max(0, t - 45) * .24 + (n - .5) * 24 * Math.min(1, t / 70);
   };
   const tg = new THREE.BufferGeometry(), tp = [], tc = [], ti = [];
   for (let i = 0; i <= segR; i++) for (let j = 0; j <= segA; j++) {
     const a = j / segA * Math.PI * 2, r = rInner(a) + 1.5 + SPAN * Math.pow(i / segR, 1.4);
-    const x = Math.cos(a) * r + OX, z = Math.sin(a) * r + CZ, y = height(x, z);
+    const x = Math.cos(a) * r, z = Math.sin(a) * r + CZ, y = height(x, z);
     tp.push(x, y, z);
     const g = .5 + .5 * Math.sin(x * .07 + z * .05);
     tc.push(.36 + .06 * g, .33 + .05 * g, .26 + .03 * g);
   }
   for (let i = 0; i < segR; i++) for (let j = 0; j < segA; j++) { const a = i * (segA + 1) + j, b = a + segA + 1; ti.push(a, b, a + 1, b, b + 1, a + 1); }
   tg.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute(tc, 3)); tg.setIndex(ti); tg.computeVertexNormals();
-  // Tierra y roca fotografiadas, teñidas por el color de cada vértice.
-  { const uv = []; for (let i = 0; i < tp.length; i += 3) uv.push(tp[i] / 6, tp[i + 2] / 6); tg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); }
-  const groundMat = pbr('tierra', { roughness: 1 }); groundMat.vertexColors = true; groundMat.color.set('#d8cbb6');
-  const terrain = new THREE.Mesh(tg, groundMat); terrain.receiveShadow = true; group.add(terrain);
+  const terrain = new THREE.Mesh(tg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); terrain.receiveShadow = true; group.add(terrain);
   // Acantilado de la Acrópolis y suelo de la meseta.
   const cliff = [], cliffIdx = [], top = [];
   const NC = 160;
   for (let j = 0; j <= NC; j++) {
-    const a = j / NC * Math.PI * 2, r = rInner(a), x = Math.cos(a) * r + OX, z = Math.sin(a) * r + CZ;
-    cliff.push(x, PLAZA_Y - .02, z, OX + (x - OX) * 1.06, PLAZA_Y - 13, z * 1.04 + CZ * -.04); top.push(new THREE.Vector2(x, -z));
+    const a = j / NC * Math.PI * 2, r = rInner(a), x = Math.cos(a) * r, z = Math.sin(a) * r + CZ;
+    cliff.push(x, PLAZA_Y - .02, z, x * 1.06, PLAZA_Y - 13, z * 1.04 + CZ * -.04); top.push(new THREE.Vector2(x, -z));
     if (j < NC) { const k = j * 2; cliffIdx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
   }
   const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.Float32BufferAttribute(cliff, 3)); cg.setIndex(cliffIdx); cg.computeVertexNormals();
-  const cuv = []; for (let j = 0; j <= NC; j++) cuv.push(j / NC * 70, 0, j / NC * 70, 3); cg.setAttribute('uv', new THREE.Float32BufferAttribute(cuv, 2));
-  const cliffMat = pbr('acantilado', { color: '#c9bba4', roughness: 1, normalScale: 1.4 }); cliffMat.side = THREE.DoubleSide;
-  group.add(new THREE.Mesh(cg, cliffMat));
+  const cuv = []; for (let j = 0; j <= NC; j++) cuv.push(j / NC * 60, 0, j / NC * 60, 4); cg.setAttribute('uv', new THREE.Float32BufferAttribute(cuv, 2));
+  group.add(new THREE.Mesh(cg, new THREE.MeshStandardMaterial({ color: '#8a7b68', map: M.wall.map, roughness: 1, side: THREE.DoubleSide })));
   const plateau = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(top)), new THREE.MeshStandardMaterial({ color: '#7d7264', roughness: 1 }));
   plateau.rotation.x = -Math.PI / 2; plateau.position.y = PLAZA_Y - .03; plateau.receiveShadow = true; group.add(plateau);
 
@@ -86,7 +63,7 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   const N = compact ? 650 : 1500;
   for (let k = 0; k < N * 3 && houses.length < N; k++) {
     const a = random() * Math.PI * 2, r = rInner(a) + 7 + Math.pow(random(), .8) * 125;
-    const x = Math.cos(a) * r + OX, z = Math.sin(a) * r + CZ;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r + CZ;
     const y = height(x, z); if (y > 22) continue;
     houses.push({ x, y, z, w: 2.5 + random() * 4, d: 2.5 + random() * 4, h: 2.2 + random() * 3.2 * (random() < .15 ? 2 : 1), rot: Math.round(random() * 4) * Math.PI / 2 + (random() - .5) * .3 });
   }
@@ -114,9 +91,9 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   });
   walls.receiveShadow = roofs.receiveShadow = true; group.add(walls, roofs);
   // Cipreses y olivos.
-  const cyp = new THREE.InstancedMesh(cypressGeometry(THREE, 2, 3, 7), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }), compact ? 220 : 520);
+  const cyp = new THREE.InstancedMesh(new THREE.ConeGeometry(.9, 7, 7).translate(0, 3.5, 0), new THREE.MeshStandardMaterial({ color: '#2c3a26', roughness: 1 }), compact ? 220 : 520);
   for (let i = 0; i < cyp.count; i++) {
-    const a = random() * Math.PI * 2, r = rInner(a) + 4 + random() * 115, x = Math.cos(a) * r + OX, z = Math.sin(a) * r + CZ;
+    const a = random() * Math.PI * 2, r = rInner(a) + 4 + random() * 115, x = Math.cos(a) * r, z = Math.sin(a) * r + CZ;
     const s = .6 + random() * .8; m4.compose(new THREE.Vector3(x, height(x, z) - .3, z), q.identity(), new THREE.Vector3(s, s * (.8 + random() * .6), s)); cyp.setMatrixAt(i, m4);
   }
   group.add(cyp);
@@ -142,19 +119,18 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   });
 
   /* ---------- Plaza: muro perimetral, cipreses en jardineras, estandartes y mosaico ---------- */
-  // Muro bajo de la plaza: abraza toda la fachada de la galería.
-  const PL = -21, PR = 60.6;
-  [PL, PR].forEach(x => { box(.6, 1.1, 40, x, PLAZA_Y + .55, 30, M.wall); box(.8, .12, 40.2, x, PLAZA_Y + 1.16, 30, M.marble); });
-  [[PL, -5.3], [5.3, PR]].forEach(([a, b]) => { box(b - a, 1.1, .6, (a + b) / 2, PLAZA_Y + .55, 50, M.wall); box(b - a + .2, .12, .8, (a + b) / 2, PLAZA_Y + 1.16, 50, M.marble); });
+  [-1, 1].forEach(s => {
+    box(.6, 1.1, 44, s * 21, PLAZA_Y + .55, 28, M.wall); box(.8, .12, 44.2, s * 21, PLAZA_Y + 1.16, 28, M.marble);
+  });
+  [-1, 1].forEach(s => { box(15.4, 1.1, .6, s * 13.3, PLAZA_Y + .55, 50, M.wall); box(15.6, .12, .8, s * 13.3, PLAZA_Y + 1.16, 50, M.marble); });
   // Propileo de entrada: dos antas y un dintel.
   [-1, 1].forEach(s => box(1.1, 5, 1.1, s * 5.3, PLAZA_Y + 2.5, 50, M.marbleWarm));
   box(12, .9, 1.4, 0, PLAZA_Y + 5.45, 50, M.marble);
-  const cypMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
-  const cypGeos = [1, 2, 3].map(k => cypressGeometry(THREE, compact ? 4 : 5, k * 1.7, 6.2));
+  const cypMat = new THREE.MeshStandardMaterial({ color: '#2f3d29', roughness: 1 });
   for (let z = 14; z <= 44; z += 6) [-1, 1].forEach(s => {
     const x = s * (s > 0 && Math.abs(z - WALL.z) < 5 ? 15 : 11.5);
     box(1.6, .7, 1.6, x, PLAZA_Y + .35, z, M.marbleGrey);
-    const c = new THREE.Mesh(cypGeos[Math.abs(Math.round(z + x)) % 3], cypMat); c.rotation.y = z; c.position.set(x, PLAZA_Y + .7, z); c.castShadow = true; group.add(c);
+    const c = new THREE.Mesh(new THREE.ConeGeometry(.75, 6.2, 10).translate(0, 3.1, 0), cypMat); c.position.set(x, PLAZA_Y + .7, z); c.castShadow = true; group.add(c);
     contactShadow(x, z, 2.6, 2.6, PLAZA_Y + .006);
   });
   // Mosaico circular en el centro de la plaza.

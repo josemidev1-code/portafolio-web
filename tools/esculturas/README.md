@@ -31,29 +31,3 @@ SRC=out/hefesto.blend DST=../../assets/hefesto/hefesto-movil.glb TRIS=50000 pyth
 ## Licencia de los recursos de partida
 
 La malla base, los objetivos, el esqueleto y los ojos de MakeHuman se publican con licencia **CC0 1.0** desde septiembre de 2020 ([LICENSE.md de MakeHuman](https://github.com/makehumancommunity/makehuman/blob/master/LICENSE.md), apartado C). Todo lo demás se genera con estos scripts: el pelo, la barba, la corona, la ropa, los accesorios y la pose.
-
-## Atenea a partir de la hoja de referencia (Hunyuan3D)
-
-La Atenea actual (`assets/atenea/`) se genera con Hunyuan3D-2mv a partir de las vistas frontal, de perfil y trasera de la hoja de referencia del cuerpo. Como en esa hoja la cara mide pocos píxeles, antes se pega encima el rostro frontal de la hoja de la cabeza, alineado por los ojos.
-
-| Archivo | Función |
-| --- | --- |
-| `atenea_compone_vista.py` | Amplía la vista frontal del cuerpo, pega el rostro en alta resolución y quita el fondo. |
-| `atenea_hunyuan.py` | Genera la malla con Hunyuan3D-2mv turbo en CPU (guarda los latentes para poder repetir solo la extracción). |
-| `atenea_a_marmol.py` | Orienta la malla, la deja a 1 unidad de alto con la base en 0, quita restos sueltos y la alisa. |
-
-```bash
-python atenea_compone_vista.py                              # in/mv_front.png (+ mv_left, mv_back)
-RES=380 python atenea_hunyuan.py                            # out/hy/mesh.obj
-python atenea_a_marmol.py -- out/hy/mesh.obj out/hy/estatua.blend 90 0
-SRC=out/hy/estatua.blend DST=../../assets/atenea/atenea.glb TRIS=180000 SUBDIV=none python export.py
-```
-
-## Colección: escaneos del SMK
-
-`escaneo_smk.py` convierte los STL de la Colección Real de Vaciados del SMK (dominio público, `api.smk.dk`) en GLB del museo: los gira (Z arriba, frente a −Y), los deja a 1 unidad de alto (los relieves, con el dorso en 0), reduce los polígonos, hornea la oclusión ambiental y exporta la versión de ordenador y la de móvil.
-
-```bash
-python escaneo_smk.py -- KAS499_small.stl ../../assets/piezas/gladiador-borghese 0 0 estatua 120000,40000
-python escaneo_smk.py -- KAS19-8_small.stl ../../assets/piezas/atenea-pergamo 90 0 relieve 140000,50000
-```

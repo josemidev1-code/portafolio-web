@@ -3,15 +3,15 @@ import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/exam
 
 import { smoothTravel, routeParameter } from './motion.js';
 import { createMotionRenderer } from './cinematic.js';
+import { addMythology } from './mythology.js';
 import { createFreeCamera } from './free-camera.js';
 import { createGreekMuseum } from './greek-temple.js';
 import { createMaterials } from './materials.js';
 import { createFires } from './fire.js';
-import { createGods, GOD_INFO, GODS } from './gods.js';
+import { createPottery } from './pottery.js';
+import { createGods, GOD_INFO } from './gods.js';
 import { createAthens, WALL } from './athens.js';
 import { PRESETS, initialQuality, createGovernor, saveChoice } from './quality.js';
-import { createTextureSet } from './textures.js';
-import { G, ROOMS, EYE, VIEW_Z } from './layout.js';
 
 const root = document.documentElement;
 let savedMotion=null;try{savedMotion=localStorage.getItem('museo-motion');}catch{}
@@ -71,20 +71,16 @@ const ABOUT_HIT = { about: true };
 const wallRight = [Math.cos(WALL.rot), 0, -Math.sin(WALL.rot)], wallFace = [Math.sin(WALL.rot), 0, Math.cos(WALL.rot)];
 const WALL_C = [WALL.x, 1.95, WALL.z];
 const along = (p, d, k) => p.map((v, i) => v + d[i] * k);
-// Galería horizontal: se entra por el templo y se recorre de izquierda a derecha mirando al muro de los proyectos.
-const roomStop = (i, name, card, hold = 1.1) => { const cx = ROOMS[i].cx; return { name, card, pos: [cx + .5, EYE, VIEW_Z], look: [cx + .9, 2.55, G.back], hold }; };
-// Parada ante el dios de la sala, como una pieza más: de tres cuartos y a la altura del rostro.
-const godStop = (id, name, title) => { const g = GODS.find(x => x.id === id), top = g.plinth + g.height * .82;
-  return { name, card: `card-${id}`, title, pos: [g.x + 1.9, top - .35, g.z + 3.3], look: [g.x + .55, top - .55, g.z], hold: 1 }; };
-const passStop = i => ({ name: 'Paso', pos: [ROOMS[i].x0, EYE + .05, G.doorZ + .3], look: [ROOMS[i].x0 + 5, 2.3, G.back], hold: 0, pass: true });
 const STOPS = [
   { name: 'Ágora',    pos: along(along(WALL_C, wallFace, 9.6), wallRight, -1.6), look: along(WALL_C, wallRight, -1.9), hold: .35 },
-  { name: 'Entrada',  pos: [3, 2.8, 25],     look: [5, 4.6, 3.8],   hold: .25 },
-  { name: 'Puerta',   pos: [0, 1.8, 7.2],    look: [0, 2, -4],      hold: 0, pass: true },
-  godStop('atenea', 'Atenea', ['Sala I · Atenea', 'Sistemas']), roomStop(0, 'JOSEMI-OS', 'card-1'), passStop(1),
-  godStop('hermes', 'Hermes', ['Sala II · Hermes', 'Automatización']), roomStop(1, 'Asistente', 'card-2'), passStop(2),
-  godStop('hefesto', 'Hefesto', ['Sala III · Hefesto', 'Lo que viene']), roomStop(2, 'Próxima', 'card-3'), passStop(3),
-  { name: 'Salida', pos: [ROOMS[3].cx, 1.8, VIEW_Z], look: [ROOMS[3].cx, 3.1, G.back], hold: .8 }
+  { name: 'Entrada',  pos: [0, 2.7, 24],     look: [0, 4.7, 3.8],   hold: .25 },
+  { name: 'Sala I',   pos: [.9, 1.55, -1.2], look: [0, 1.45, -5.2], hold: 1.1 },
+  { name: 'Pasillo',  pos: [-.4, 1.7, -10], look: [0, 1.5, -18],  hold: 0, pass: true },
+  { name: 'Sala II',  pos: [.9, 1.55, -13.2], look: [0, 1.45, -17.2], hold: 1.1 },
+  { name: 'Pasillo',  pos: [.4, 1.7, -22],  look: [0, 1.5, -30],  hold: 0, pass: true },
+  { name: 'Sala III', pos: [.9, 1.55, -25.2], look: [0, 1.45, -29.2], hold: 1.1 },
+  { name: 'Pasillo',  pos: [0, 1.8, -34],    look: [0, 3.2, -44],  hold: 0, pass: true },
+  { name: 'Salida',   pos: [0, 1.9, -36.5],  look: [0, 3.4, -44],  hold: .8 }
 ];
 // Conserva el encuadre al girar el móvil o redimensionar la ventana.
 const originalStops = STOPS.map(s => ({pos: [...s.pos], look: [...s.look]}));
@@ -92,10 +88,8 @@ function frameRoute() {
   small = innerWidth < 720;
   STOPS.forEach((s,i) => {
     s.pos = [...originalStops[i].pos]; s.look = [...originalStops[i].look];
-    // En vertical la cámara se pega a la fachada interior para que el cuadro quepa entero.
-    if (small && /^card-\d$/.test(s.card || '')) { s.pos = [s.pos[0] - .2, 2.1, G.front - .35]; s.look = [s.pos[0], 2.2, G.back]; }
-    // Ante los dioses, en vertical la cámara retrocede para que la estatua quepa entera.
-    else if (small && s.title) { s.pos = [s.pos[0] + .6, s.pos[1] - .2, s.pos[2] + 1.6]; }
+    // En vertical cada sala gira un poco hacia su dios para que urna y escultura compartan encuadre.
+    if (small && s.name.startsWith('Sala')) { const z = s.look[2]; s.pos = [.35, 2.7, z + 7.1]; s.look = [-.95, .15, z - 1]; }
   });
   if (small) {
     // En vertical el muro se aleja y sube en el encuadre para dejar sitio a la portada.
@@ -109,7 +103,7 @@ const MAIN = STOPS.map((s, i) => s.pass ? -1 : i).filter(i => i >= 0); // índic
 const segs = []; let total = 0;
 STOPS.forEach((s, i) => {
   if (s.hold) { segs.push({ type: 'hold', i, a: total, b: total + s.hold }); total += s.hold; }
-  if (i < STOPS.length - 1) { const len = i === 0 ? 1.8 : i === 1 ? 1.6 : i === 2 ? 1.4 : (STOPS[i + 1].pass || s.pass ? 1.05 : 1.4); segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
+  if (i < STOPS.length - 1) { const len = i === 0 ? 1.8 : i === 1 ? 3.2 : (STOPS[i + 1].pass || s.pass ? 1.05 : 1.4); segs.push({ type: 'move', i, a: total, b: total + len }); total += len; }
 });
 const track = document.getElementById('track');
 const VH_PER_UNIT = small ? 82 : 72;
@@ -183,10 +177,11 @@ function canvasTex(w, h, draw, opts = {}) {
   return t;
 }
 const M = createMaterials(THREE, { compact });
-const pbr = createTextureSet(THREE, renderer, { compact });
-const architecture = createGreekMuseum(THREE, scene, canvasTex, compact, M, pbr);
-const athens = createAthens(THREE, scene, M, { compact, canvasTex, contactShadow: architecture.contactShadow, pbr });
+const architecture = createGreekMuseum(THREE, scene, canvasTex, compact, M);
+const mythology = addMythology(THREE, scene, canvasTex, compact, M);
+const athens = createAthens(THREE, scene, M, { compact, canvasTex, contactShadow: architecture.contactShadow });
 const fires = createFires(THREE, scene, M, { compact, canvasTex });
+createPottery(THREE, scene, M, { compact, contactShadow: architecture.contactShadow });
 const gods = createGods(THREE, scene, M, { compact, renderer, contactShadow: architecture.contactShadow });
 const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact,reduce});
 
@@ -208,9 +203,57 @@ function wallText(lines, { w = 4, h = 1.6, size = 150, color = 'rgba(46,34,24,.9
   m.userData.tex = tex; return m;
 }
 
-/* ---------- Proyectos colgados como cuadros ---------- */
-// Cada proyecto es un lienzo en el muro del fondo de su sala, con marco dorado, lámpara de cuadro y cartela.
-const works = [];
+/* ---------- Urnas ---------- */
+const urns = [];
+const glassMat = new THREE.MeshStandardMaterial({ color: '#c3d5db', roughness: .22, metalness: .08, transparent: true, opacity: .07, envMapIntensity: .35, side: THREE.FrontSide, depthWrite: false });
+
+function addSpot(x, z, color, intensity, target) {
+  const spot = new THREE.SpotLight(color, intensity, 14, Math.PI / 10, .6, 1.4);
+  spot.position.set(x, 7.6, z + 1.4); spot.target = target; spot.castShadow = false;
+  spot.shadow.mapSize.set(1024, 1024); spot.shadow.radius = 2; spot.shadow.blurSamples = 6; spot.shadow.bias = -.0004; scene.add(spot); scene.add(spot.target);
+  // cono volumétrico falso
+  const coneH = 5.4;
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(1.25, coneH, 48, 1, true), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    uniforms: { uColor: { value: new THREE.Color(color) }, uStrength: { value: .07 } },
+    vertexShader: 'varying float vY; varying vec3 vN; varying vec3 vV; void main(){ vY = uv.y; vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
+    fragmentShader: 'uniform vec3 uColor; uniform float uStrength; varying float vY; varying vec3 vN; varying vec3 vV; void main(){ float rim = pow(abs(dot(vN, vV)), 1.6); float a = vY * vY * rim * uStrength; gl_FragColor = vec4(uColor * a, a); }'
+  }));
+  const top = new THREE.Vector3(x, 7.6, z + 1.4), bottom = target.position.clone();
+  cone.position.copy(top).lerp(bottom, .5); cone.lookAt(bottom); cone.rotateX(-Math.PI / 2);
+  cone.scale.y = top.distanceTo(bottom) / coneH; scene.add(cone);
+  return { spot, cone };
+}
+
+function makeUrn({ z, accent, inner, plaque }) {
+  const g = new THREE.Group(); g.position.set(0, 0, z); scene.add(g);
+  // Peana de mármol: zócalo gris, dado veteado y cornisa clara con filete.
+  [[1.36, .12, .06, M.marbleGrey], [1.24, .06, .15, M.marble], [1.1, .7, .53, M.marbleWarm], [1.24, .07, .915, M.marble], [1.3, .06, .975, M.marbleGrey]].forEach(([s, h, y, mat]) => {
+    const part = new THREE.Mesh(new THREE.BoxGeometry(s, h, s), mat); part.position.y = y; part.castShadow = part.receiveShadow = true; g.add(part);
+  });
+  architecture.contactShadow(0, z, 2.4);
+  // base de bronce del cristal
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(1.08, .06, 1.08), M.darkGilt);
+  rim.position.y = 1.035; rim.castShadow = true; g.add(rim);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 1.0), glassMat);
+  glass.position.y = 1.665; glass.renderOrder = 2; g.add(glass);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(glass.geometry), new THREE.LineBasicMaterial({ color: '#e6c48c', transparent: true, opacity: .35 }));
+  edges.position.copy(glass.position); g.add(edges);
+  // pieza interior
+  inner.position.y = 1.62; g.add(inner);
+  // luz interior de color
+  const glow = new THREE.PointLight(accent, small ? 0 : 2.2, 2.6, 2); glow.position.set(0, 1.5, .1); glow.visible = !small; glow.userData.extra = !small; g.add(glow);
+  // cartela de latón en la peana
+  const plq = new THREE.Mesh(new THREE.PlaneGeometry(.7, .2), new THREE.MeshStandardMaterial({ map: plaque, metalness: .7, roughness: .38 }));
+  plq.position.set(0, .66, .552); g.add(plq);
+  // caja de impacto para el ratón
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.4, 1.3), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 1.2; g.add(hit);
+  const target = new THREE.Object3D(); target.position.set(0, 1.2, z);
+  const { cone } = addSpot(0, z, '#ffe9c7', small ? 70 : 110, target);
+  const u = { group: g, inner, edges, glow, hit, cone, accent };
+  urns.push(u); return u;
+}
 function plaqueTex(code, title) {
   return canvasTex(700, 200, (g, W, H) => {
     const grd = g.createLinearGradient(0, 0, W, H); grd.addColorStop(0, '#9a7444'); grd.addColorStop(.5, '#c9a46a'); grd.addColorStop(1, '#8b6a3e');
@@ -219,35 +262,9 @@ function plaqueTex(code, title) {
     g.font = '600 64px "Cinzel", Georgia, serif'; g.fillText(title.toUpperCase(), 32, 148);
   }, { text: true });
 }
-function makeWork({ room, w, h, map, accent, plaque, ficha, y = 3.35 }) {
-  const cx = ROOMS[room].cx, z = G.back;
-  const g = new THREE.Group(); g.position.set(cx, y, z); scene.add(g);
-  // Marco de dos molduras doradas con un listel oscuro entre ellas.
-  const bar = (bw, bh, bd, x, yy, zz, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mat); m.position.set(x, yy, zz); m.castShadow = true; m.receiveShadow = true; g.add(m); };
-  [[.16, .1, M.gilt, 0], [.07, .14, M.darkGilt, .16], [.05, .16, M.gilt, .23]].forEach(([t, d, mat, o]) => {
-    const W2 = w + 2 * (o + t), H2 = h + 2 * (o + t);
-    bar(W2, t, d, 0, H2 / 2 - t / 2, d / 2, mat); bar(W2, t, d, 0, -H2 / 2 + t / 2, d / 2, mat);
-    bar(t, H2 - 2 * t, d, W2 / 2 - t / 2, 0, d / 2, mat); bar(t, H2 - 2 * t, d, -W2 / 2 + t / 2, 0, d / 2, mat);
-  });
-  const canvasMat = new THREE.MeshStandardMaterial({ map, roughness: .55, emissive: '#ffffff', emissiveMap: map, emissiveIntensity: .12 });
-  const pic = new THREE.Mesh(new THREE.PlaneGeometry(w, h), canvasMat); pic.position.z = .06; g.add(pic);
-  // Lámpara de cuadro de latón sobre el marco.
-  const lampY = h / 2 + .45;
-  bar(.05, .05, .42, 0, lampY, .21, M.darkGilt);
-  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, w * .55, 24), M.gilt); lamp.rotation.z = Math.PI / 2; lamp.position.set(0, lampY, .44); g.add(lamp);
-  const strip = new THREE.Mesh(new THREE.PlaneGeometry(w * .5, .03), new THREE.MeshBasicMaterial({ color: '#fff3d6', toneMapped: false })); strip.position.set(0, lampY - .062, .44); strip.rotation.x = Math.PI / 2; g.add(strip);
-  // Luz del cuadro: un foco cálido desde el techo, rasante sobre el lienzo.
-  const spot = new THREE.SpotLight('#ffe9c7', small ? 60 : 85, 12, Math.PI / 8.5, .55, 1.3);
-  spot.position.set(cx, G.ceil - .2, G.back + 4.2); spot.target.position.set(cx, y, z); scene.add(spot, spot.target);
-  // Cartela de latón a la derecha, a la altura de los ojos.
-  const plq = new THREE.Mesh(new THREE.PlaneGeometry(.62, .18), new THREE.MeshStandardMaterial({ map: plaque, metalness: .7, roughness: .38 }));
-  plq.position.set(w / 2 + .75, 1.6 - y, .03); g.add(plq);
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(w + .6, h + .6, .6), new THREE.MeshBasicMaterial({ visible: false })); hit.position.z = .3; g.add(hit);
-  const u = { group: g, hit, ficha, accent, canvasMat }; works.push(u); return u;
-}
 
-/* JOSEMI-OS: el lienzo es la pantalla viva del sistema, arrancando y mostrando su logotipo. */
-const screenTex = canvasTex(1024, 768, () => {});
+/* Pieza 01: monitor de JOSEMI-OS con pantalla viva */
+const screenTex = canvasTex(512, 384, () => {});
 const screenCtx = screenTex.userData.ctx;
 const BOOT = ['josemi@portfolio:~$ ./boot JOSEMI-OS', '[ ok ] cargando núcleo html.css.js', '[ ok ] montando escritorio', '[ ok ] abriendo terminal', '[ ok ] arcade listo', '[ ok ] 6 fondos ascii', '', 'bienvenido a JOSEMI-OS', 'build, learn, repeat.'];
 const ASCII = [
@@ -256,10 +273,11 @@ const ASCII = [
   '| | (_) \\__ \\ _|| |\\/| || |  | (_) \\__ \\',
   '\\__/\\___/|___/___|_|  |_|___|  \\___/|___/'
 ];
+let screenT = 0;
 function drawScreen(t) {
   const g = screenCtx, W = 512, H = 384;
-  g.setTransform(2, 0, 0, 2, 0, 0);
   g.fillStyle = '#04110a'; g.fillRect(0, 0, W, H);
+  // lluvia de código tenue al fondo
   g.font = '14px "JetBrains Mono", monospace';
   for (let x = 0; x < W; x += 16) {
     const y = ((t * 60 + x * 37) % (H + 200)) - 100;
@@ -279,73 +297,99 @@ function drawScreen(t) {
     g.fillText('// portfolio interactivo', 36, 260);
     g.fillText('> ayuda_', 36, 300);
   }
+  // líneas de barrido CRT
   g.fillStyle = 'rgba(0,0,0,.22)'; for (let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
-  g.setTransform(1, 0, 0, 1, 0, 0);
   screenTex.needsUpdate = true;
 }
 drawScreen(0);
+function makeMonitor() {
+  const m = new THREE.Group();
+  const caseMat = new THREE.MeshStandardMaterial({ color: '#d9d2c3', roughness: .55 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.62, .5, .46), caseMat); body.castShadow = true; m.add(body);
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(.56, .44, .02), new THREE.MeshStandardMaterial({ color: '#1a1b1d', roughness: .6 }));
+  bezel.position.z = .235; m.add(bezel);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(.48, .36), new THREE.MeshBasicMaterial({ map: screenTex, toneMapped: false }));
+  screen.position.z = .247; m.add(screen);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(.06, .09, .1, 24), caseMat); neck.position.y = -.3; m.add(neck);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(.4, .03, .3), caseMat); foot.position.y = -.36; m.add(foot);
+  const kb = new THREE.Mesh(new THREE.BoxGeometry(.5, .03, .14), caseMat); kb.position.set(0, -.36, .3); kb.rotation.x = .08; m.add(kb);
+  m.position.y = .2; m.scale.setScalar(1);
+  const wrap = new THREE.Group(); wrap.add(m); wrap.position.y = 0;
+  wrap.userData.float = .03; wrap.userData.spin = .25; wrap.userData.yOffset = -.1;
+  return wrap;
+}
 
-/* Asistente de gimnasio: un lienzo con la conversación de WhatsApp y el flujo de n8n hasta la IA. */
-const gymTex = canvasTex(1200, 900, (g, W, H) => {
-  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#101826'); bg.addColorStop(1, '#0b0f17'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  g.strokeStyle = 'rgba(141,180,255,.08)'; g.lineWidth = 1; for (let x = 0; x < W; x += 30) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let y = 0; y < H; y += 30) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-  // Chat
-  const bubble = (x, y, w, text, mine) => { g.fillStyle = mine ? '#1f6f50' : '#1d2635'; g.beginPath(); g.roundRect(x, y, w, 64, 16); g.fill(); g.fillStyle = '#e8eef7'; g.font = '500 24px "Instrument Sans", sans-serif'; g.fillText(text, x + 20, y + 40); };
-  g.fillStyle = '#e8eef7'; g.font = '600 28px "Instrument Sans", sans-serif'; g.fillText('WhatsApp · Gimnasio', 60, 90);
-  bubble(60, 130, 380, '¿A qué hora abrís el sábado?', false);
-  bubble(140, 214, 360, 'De 9:00 a 14:00 💪', true);
-  bubble(60, 298, 400, '¿Puedo congelar mi cuota?', false);
-  bubble(120, 382, 380, 'Sí, desde la app o aquí.', true);
-  // Flujo n8n
-  const node = (x, y, label, color) => { g.fillStyle = '#172033'; g.strokeStyle = color; g.lineWidth = 4; g.beginPath(); g.roundRect(x - 95, y - 48, 190, 96, 18); g.fill(); g.stroke(); g.fillStyle = color; g.font = '600 26px "Instrument Sans", sans-serif'; g.textAlign = 'center'; g.fillText(label, x, y + 9); g.textAlign = 'left'; };
-  const link = (x0, y0, x1, y1) => { g.strokeStyle = 'rgba(141,180,255,.7)'; g.lineWidth = 4; g.beginPath(); g.moveTo(x0, y0); g.bezierCurveTo((x0 + x1) / 2, y0, (x0 + x1) / 2, y1, x1, y1); g.stroke(); };
-  link(735, 250, 835, 420); link(835, 420, 1035, 420); link(1035, 420, 935, 640); link(935, 640, 735, 640);
-  node(735, 250, 'WhatsApp', '#5bd69a'); node(840, 420, 'n8n', '#ff8a65'); node(1040, 420, 'IA', '#8db4ff'); node(940, 640, 'Respuesta', '#e8c37a'); node(735, 640, 'Socio', '#5bd69a');
-  g.fillStyle = '#d8b46a'; g.font = '600 46px "Cinzel", Georgia, serif'; g.fillText('ASISTENTE DE GIMNASIO', 60, 820);
-  g.fillStyle = 'rgba(232,238,247,.6)'; g.font = 'italic 500 28px "Cormorant Garamond", Georgia, serif'; g.fillText('WhatsApp · n8n · IA — pieza en restauración', 60, 862);
-}, { text: true });
+/* Pieza 02: mancuerna + nodos de automatización */
+function makeGym() {
+  const g = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: '#2e3036', metalness: .85, roughness: .28 });
+  const chrome = new THREE.MeshStandardMaterial({ color: '#c8ccd4', metalness: 1, roughness: .15 });
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(.025, .025, .62, 16), chrome); bar.rotation.z = Math.PI / 2; g.add(bar);
+  [-1, 1].forEach(s => {
+    [0, 1].forEach(k => {
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(.14 - k * .03, .14 - k * .03, .05, 6), metal);
+      plate.rotation.z = Math.PI / 2; plate.position.x = s * (.24 - k * .055); plate.castShadow = true; g.add(plate);
+    });
+  });
+  const nodes = new THREE.Group(); g.add(nodes);
+  const nodeMat = new THREE.MeshBasicMaterial({ color: '#8db4ff', toneMapped: false });
+  const pts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = i / 5 * Math.PI * 2, p = new THREE.Vector3(Math.cos(a) * .36, Math.sin(a * 2) * .1 + .05, Math.sin(a) * .36);
+    const n = new THREE.Mesh(new THREE.SphereGeometry(.028, 16, 16), nodeMat); n.position.copy(p); nodes.add(n); pts.push(p);
+  }
+  pts.push(pts[0].clone());
+  nodes.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#8db4ff', transparent: true, opacity: .55 })));
+  g.userData.nodes = nodes; g.userData.float = .04; g.userData.spin = .35; g.rotation.x = .25;
+  return g;
+}
 
-/* Sala III: el hueco de la próxima obra, cubierto con un paño hasta que se presente. */
-const nextTex = canvasTex(900, 1100, (g, W, H) => {
-  const bg = g.createLinearGradient(0, 0, W, 0); bg.addColorStop(0, '#3a0d0f'); bg.addColorStop(.5, '#6a1a1c'); bg.addColorStop(1, '#3a0d0f'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  // Pliegues del paño: franjas verticales de luz y sombra.
-  for (let x = 0; x < W; x += 2) { const v = Math.sin(x / W * Math.PI * 9) * .5 + Math.sin(x / W * Math.PI * 23 + 1) * .25; g.fillStyle = v > 0 ? `rgba(255,170,140,${v * .1})` : `rgba(0,0,0,${-v * .3})`; g.fillRect(x, 0, 2, H); }
-  const sh = g.createLinearGradient(0, 0, 0, H); sh.addColorStop(0, 'rgba(0,0,0,.4)'); sh.addColorStop(.25, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.35)'); g.fillStyle = sh; g.fillRect(0, 0, W, H);
-  g.textAlign = 'center'; g.fillStyle = '#d9b77a'; g.font = '600 64px "Cinzel", Georgia, serif'; g.fillText('PRÓXIMA', W / 2, H / 2 - 30); g.fillText('ADQUISICIÓN', W / 2, H / 2 + 50);
-  g.font = 'italic 500 34px "Cormorant Garamond", Georgia, serif'; g.fillStyle = 'rgba(240,220,190,.8)'; g.fillText('Se está forjando en el taller de Hefesto', W / 2, H / 2 + 120);
-}, { text: true });
+/* Pieza 03: urna reservada, una forma que aún se está montando */
+function makeNext() {
+  const g = new THREE.Group();
+  const geo = new THREE.IcosahedronGeometry(.28, 1);
+  const wire = new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: '#c9a46a', transparent: true, opacity: .8 }));
+  g.add(wire);
+  const p = geo.attributes.position; const dots = new THREE.BufferGeometry();
+  dots.setAttribute('position', p.clone());
+  const pts = new THREE.Points(dots, new THREE.PointsMaterial({ color: '#f3dcb2', size: .025, toneMapped: false }));
+  g.add(pts); g.userData.float = .05; g.userData.spin = .2; g.userData.wire = wire;
+  return g;
+}
 
-makeWork({ room: 0, w: 3.6, h: 2.7, map: screenTex, accent: '#8cf0b4', plaque: plaqueTex('JM-001 · 2026', 'JOSEMI-OS'), ficha: 0 });
-makeWork({ room: 1, w: 3.6, h: 2.7, map: gymTex, accent: '#8db4ff', plaque: plaqueTex('JM-002 · 2026', 'Asistente gym'), ficha: 1 });
-makeWork({ room: 2, w: 2.4, h: 2.95, map: nextTex, accent: '#c9a46a', plaque: plaqueTex('JM-003 · —', 'Reservada'), ficha: -1 });
+const U1 = makeUrn({ z: -5.2, accent: '#8cf0b4', inner: makeMonitor(), plaque: plaqueTex('JM-001 · 2026', 'JOSEMI-OS') });
+const U2 = makeUrn({ z: -17.2, accent: '#8db4ff', inner: makeGym(), plaque: plaqueTex('JM-002 · 2026', 'Asistente gym') });
+const U3 = makeUrn({ z: -29.2, accent: '#c9a46a', inner: makeNext(), plaque: plaqueTex('JM-003 · —', 'Reservada') });
+U1.ficha = 0; U2.ficha = 1; U3.ficha = -1;
 
-/* Rótulos de sala grabados en el muro del fondo, sobre el cuadro. */
+/* Rótulos de sala en los muros */
 const rooms = [
-  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', room: 0 },
-  { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', room: 1 },
-  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', room: 2 }
+  // Inscripciones en el muro derecho; el dios de cada sala ocupa el fondo izquierdo.
+  { lines: ['Sala I · Atenea', 'Sistemas'], sub: 'JM-001', z: -6, x: 5.79 },
+  { lines: ['Sala II · Hermes', 'Automatización'], sub: 'JM-002', z: -18, x: 5.79 },
+  { lines: ['Sala III · Hefesto', 'Lo que viene'], sub: 'JM-003', z: -30, x: 5.79 }
 ];
 rooms.forEach(r => {
-  const t = wallText(r.lines, { w: 3.4, h: 1.36, size: 112, sub: r.sub + ' · colección permanente', align: 'center' });
-  t.position.set(ROOMS[r.room].cx, 6.3, G.back + .02); scene.add(t);
+  const t = wallText(r.lines, { w: 4.8, h: 1.92, size: 112, sub: r.sub + ' · colección permanente' });
+  t.position.set(r.x > 0 ? 5.89 : -5.89, 3.55, r.z); t.rotation.y = r.x < 0 ? Math.PI / 2 : -Math.PI / 2; scene.add(t);
 });
-/* Sala de salida: inscripción de despedida en oro sobre el muro del fondo. */
-const neon = wallText(['Gracias por', 'la visita'], { w: 5, h: 2, size: 120, color: '#e9c98f', align: 'center', gilt: true });
+// cuadros en los muros: lienzos abstractos con luz rasante
+/* Muro final: neón de contacto */
+const neon = wallText(['Gracias por', 'la visita'], { w: 6, h: 2.4, size: 120, color: '#e9c98f', align: 'center', gilt: true });
 neon.material = new THREE.MeshStandardMaterial({ map: neon.userData.tex, transparent: true, depthWrite: false, metalness: .6, roughness: .35, emissive: '#7a4a18', emissiveMap: neon.userData.tex, emissiveIntensity: .35 });
-neon.position.set(ROOMS[3].cx, 5.7, G.back + .03); scene.add(neon);
-const neonGlow = new THREE.PointLight('#ffb866', 6, 9, 1.5); neonGlow.position.set(ROOMS[3].cx, 4.6, G.back + 2.2); scene.add(neonGlow);
-// Banco de mármol en el centro de la sala de salida, sobre dos patas.
-const bench = new THREE.Group(); bench.position.set(ROOMS[3].cx, 0, -.6); scene.add(bench);
+neon.position.set(0, 4.9, -45.97); neon.visible = !small; scene.add(neon);
+const neonGlow = new THREE.PointLight('#ffb866', 9, 11, 1.5); neonGlow.position.set(0, 3.2, -43.6); scene.add(neonGlow);
+// Banco de mármol frente a la salida, sobre dos patas con voluta.
+const bench = new THREE.Group(); bench.position.set(0, 0, -40); scene.add(bench);
 [[2.6, .1, .7, .47, M.marble], [.16, .42, .56, .21, M.marbleGrey]].forEach(([w, h, d, y, mat], i) => {
   (i ? [-1.05, 1.05] : [0]).forEach(x => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, 0); m.castShadow = m.receiveShadow = true; bench.add(m); });
 });
-architecture.contactShadow(ROOMS[3].cx, -.6, 3.2, 1.4);
-
+architecture.contactShadow(0, -40, 3.2, 1.4);
 
 /* Motas de polvo en el aire */
-const DUST = small ? 500 : 1400;
+const DUST = small ? 350 : 900;
 const dustGeo = new THREE.BufferGeometry(); const dp = new Float32Array(DUST * 3);
-for (let i = 0; i < DUST; i++) { dp[i * 3] = ROOMS[0].x0 + Math.random() * (ROOMS[3].x1 - ROOMS[0].x0); dp[i * 3 + 1] = Math.random() * 6.5; dp[i * 3 + 2] = G.back + Math.random() * (G.front - G.back + 4); }
+for (let i = 0; i < DUST; i++) { dp[i * 3] = (Math.random() - .5) * 11; dp[i * 3 + 1] = Math.random() * 6.5; dp[i * 3 + 2] = 8 - Math.random() * 54; }
 dustGeo.setAttribute('position', new THREE.BufferAttribute(dp, 3));
 const dotTex = canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
 const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#ffe6c2', map: dotTex, size: .028, transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -390,9 +434,9 @@ qualityButton.addEventListener('click', () => {
 applyQuality();
 
 /* ---------- Interfaz ---------- */
-const cards = Object.fromEntries(STOPS.map((s, i) => [i, s.card && document.getElementById(s.card)]).filter(([, el]) => el));
+const cards = { 2: document.getElementById('card-1'), 4: document.getElementById('card-2'), 6: document.getElementById('card-3') };
 const roomTitle = document.getElementById('room-title'), roomKicker = document.getElementById('room-kicker'), roomText = document.getElementById('room-text');
-const ROOM_TITLES = Object.fromEntries(STOPS.map((s, i) => [i, s.title]).filter(([, t]) => t));
+const ROOM_TITLES = { 2: ['Sala I · Atenea', 'Sistemas'], 4: ['Sala II · Hermes', 'Automatización'], 6: ['Sala III · Hefesto', 'Lo que viene'] };
 const entrance = document.querySelector('.entrance'), exit = document.getElementById('contacto');
 const railFill = document.getElementById('rail-fill'), railStops = document.getElementById('rail-stops');
 const roomName = document.getElementById('room-name'), roomCount = document.getElementById('room-count');
@@ -532,20 +576,28 @@ function loop() {
   athens.update(reduce ? 0 : t, camera);
   fires.update(t,camera,reduce);
 
-  // Al pasar el ratón, el lienzo se ilumina un poco, como si se encendiera su lámpara.
-  works.forEach(u => { const m = u.canvasMat; m.emissiveIntensity += ((hovered === u ? .3 : .12) - m.emissiveIntensity) * .12; });
+  urns.forEach((u, i) => {
+    const d = u.inner.userData;
+    if (!reduce) { u.inner.rotation.y += d.spin * dt; u.inner.position.y = 1.62 + (d.yOffset || 0) + Math.sin(t * 1.3 + i) * d.float; }
+    else u.inner.position.y = 1.62 + (d.yOffset || 0);
+    if (d.nodes) d.nodes.rotation.y -= dt * .8 * par;
+    if (d.wire) d.wire.material.opacity = reduce ? .7 : .45 + .4 * Math.abs(Math.sin(t * 1.2));
+    const isHover = hovered === u;
+    u.edges.material.opacity += ((isHover ? .9 : .35) - u.edges.material.opacity) * .12;
+    u.glow.intensity += ((isHover ? 4 : 2.2) - u.glow.intensity) * .1;
+  });
   screenAcc += dt; if (screenAcc > 1 / 24) { drawScreen(t); screenAcc = 0; }
   if (frameNo % PRESETS[quality].shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
   if (!reduce && dust.visible) { const p = dustGeo.attributes.position; for (let i = 0; i < DUST; i++) { let y = p.array[i * 3 + 1] + dt * .04 * ((i % 7) - 3) * .3; if (y > 6.5) y = 0; if (y < 0) y = 6.5; p.array[i * 3 + 1] = y; } p.needsUpdate = true; }
 
-  // hover sobre cuadros, dioses y piezas
+  // hover sobre urnas
   if (finePointer && !dlg.open) {
     ray.setFromCamera(ndc, camera);
-    const targets = [...works.map(u => u.hit), ...gods.hits.map(g => g.mesh), athens.wallHit];
+    const targets = [...urns.map(u => u.hit), ...gods.hits.map(g => g.mesh), athens.wallHit];
     const hit = ray.intersectObjects(targets, false)[0];
-    const u = hit && hit.distance < 12 ? (works.find(x => x.hit === hit.object) || gods.hits.find(g => g.mesh === hit.object) || (hit.object === athens.wallHit ? ABOUT_HIT : null)) : null;
+    const u = hit && hit.distance < 12 ? (urns.find(x => x.hit === hit.object) || gods.hits.find(g => g.mesh === hit.object) || (hit.object === athens.wallHit ? ABOUT_HIT : null)) : null;
     hovered = u && (u.god || u.about || u.ficha >= 0) ? u : null;
-    if (hovered) cursorLabel.textContent = hovered.about ? 'Sobre mí' : hovered.god ? (GOD_INFO[hovered.god].piece ? 'Ver pieza' : `Conocer a ${GOD_INFO[hovered.god].title}`) : 'Ver ficha';
+    if (hovered) cursorLabel.textContent = hovered.about ? 'Sobre mí' : hovered.god ? `Conocer a ${GOD_INFO[hovered.god].title}` : 'Ver ficha';
     cursor.classList.toggle('view', !!hovered);
   } else hovered = null;
   cx += (tx - cx) * (1 - Math.pow(.0001, dt)); cy += (ty - cy) * (1 - Math.pow(.0001, dt));
@@ -557,6 +609,7 @@ function loop() {
     entrance.style.visibility='hidden';document.querySelector('.museum-caption').style.opacity='0';roomTitle.classList.remove('on');
     Object.entries(cards).forEach(([i,el])=>{const visible=+i===nearest&&distance<6;el.classList.toggle('on',visible);el.inert=!visible;el.setAttribute('aria-hidden',String(!visible));});
   }else updateUI(s);
+  mythology.update(t,reduce);
   cinematic.render(dt);
   governor.tick(performance.now()); frameNo++;
   fpsFrames++;

@@ -2,32 +2,12 @@
  *  Cada pieza tiene pedestal con inscripción griega, luz propia y una zona invisible para abrir su ficha. */
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/DRACOLoader.js';
-import { G } from './layout.js';
 
-// Posiciones en la galería horizontal (layout.js): el dios de cada sala a la izquierda del cuadro.
 export const GODS = [
-  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -3.6, z: -3.4, rot: .42, height: 2.3, plinth: 1.0, kind: 'sculpt', src: 'assets/atenea/atenea', hero: true },
-  { id: 'hermes', greek: 'ΕΡΜΗΣ', motto: 'Mensajero de los dioses', x: 12, z: -3.4, rot: .42, height: 2.45, plinth: 1.0, kind: 'scan', src: 'assets/hermes/hermes', hero: true },
-  { id: 'hefesto', greek: 'ΗΦΑΙΣΤΟΣ', motto: 'El herrero del Olimpo', x: 26, z: -3.4, rot: .42, height: 1.42, plinth: 1.0, kind: 'sculpt', src: 'assets/hefesto/hefesto', hero: true }
-];
-/* Piezas de la colección: escaneos 3D de vaciados de la Colección Real de Vaciados (SMK, Copenhague),
-   de dominio público. `wall` cuelga la pieza en el muro del fondo como un relieve. */
-export const PIEZAS = [
-  { id: 'atenea-egina', label: 'Atenea · Egina', height: 1.705, plinth: .7, x: 3.9, z: -3, rot: -.45, pw: 1.1 },
-  { id: 'atenea-pergamo', label: 'Altar de Pérgamo', height: 3.0, wall: true, x: 5.7, y: .95 },
-  { id: 'discobolo', label: 'Discóbolo', height: 1.68, plinth: .8, x: 19.5, z: -3, rot: -.5, pw: 1.1 },
-  { id: 'lapita-centauro', label: 'Metopa del Partenón', height: 1.36, wall: true, x: 21.0, y: 2.4 },
-  { id: 'guerrero-carrera', label: 'Guerrero · Egina', height: .95, plinth: .7, x: 10.2, z: -6.9, rot: .35, pw: 1.5 },
-  { id: 'gladiador-borghese', label: 'Gladiador Borghese', height: 1.66, plinth: .7, x: 33.5, z: -3, rot: -.6, pw: 1.3 },
-  { id: 'centauro-lapita', label: 'Metopa del Partenón', height: 1.36, wall: true, x: 35.0, y: 2.4 },
-  { id: 'guerrero-escudo', label: 'Guerrero con escudo', height: 1.48, plinth: .7, x: 24.4, z: -6.9, rot: .35, pw: 1.2 },
-  { id: 'arquero', label: 'Arquero · Egina', height: 1.04, plinth: .6, x: 29.6, z: -6.9, rot: 0, pw: 1.2 },
-  { id: 'escudo-strangford', label: 'Escudo Strangford', height: .5, wall: true, x: 27.2, y: 3.1 },
-  { id: 'poseidon', label: 'Poseidón · Artemisio', height: 2.01, plinth: 1.1, x: 42.6, z: -4.6, rot: 0, pw: 1.4, hero: true },
-  { id: 'laocoonte', label: 'Laocoonte', height: 2.2, plinth: .6, x: 38.6, z: -5.8, rot: .4, pw: 1.7 },
-  { id: 'ares-ludovisi', label: 'Ares Ludovisi', height: 1.58, plinth: .8, x: 46.6, z: -5.8, rot: -.4, pw: 1.4 },
-  { id: 'cariatide', label: 'Cariátide', height: 2.3, plinth: .45, x: -3.3, z: 4.75, rot: 0, pw: .9, outside: true },
-  { id: 'cariatide', label: 'Cariátide', height: 2.3, plinth: .45, x: 3.3, z: 4.75, rot: 0, pw: .9, outside: true }
+  // Busto monumental: el rostro lleva pintado el trazo del retrato de referencia, como la policromía de las estatuas griegas.
+  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -2.8, z: -7.9, rot: .48, height: 2.3, plinth: 1.0, kind: 'sculpt', src: 'assets/atenea/atenea', hero: true },
+  { id: 'hermes', greek: 'ΕΡΜΗΣ', motto: 'Mensajero de los dioses', x: -2.8, z: -19.9, rot: .48, height: 2.45, plinth: 1.0, kind: 'scan', src: 'assets/hermes/hermes', hero: true },
+  { id: 'hefesto', greek: 'ΗΦΑΙΣΤΟΣ', motto: 'El herrero del Olimpo', x: -2.8, z: -31.9, rot: .48, height: 1.42, plinth: 1.0, kind: 'sculpt', src: 'assets/hefesto/hefesto', hero: true }
 ];
 
 /* Mármol sin UV: se proyecta la textura veteada desde las tres direcciones del espacio. */
@@ -63,7 +43,7 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
 
   function pedestal(root, g) {
     const add = (w, h, d, y, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.y = y; m.castShadow = m.receiveShadow = true; root.add(m); return m; };
-    const s = g.pw ? g.pw / 1.3 : g.hero ? 1 : .82, H = g.plinth;
+    const s = g.hero ? 1 : .82, H = g.plinth;
     add(1.62 * s, .16, 1.42 * s, .08, M.marbleGrey); add(1.5 * s, .1, 1.3 * s, .21, M.marble);
     add(1.3 * s, H - .42, 1.1 * s, .26 + (H - .42) / 2, M.marbleGrey);
     add(1.42 * s, .08, 1.22 * s, H - .12, M.marble); add(1.5 * s, .1, 1.3 * s, H - .05, M.marble);
@@ -87,7 +67,7 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
   function lights(g) {
     const key = new THREE.SpotLight('#ffe2bd', (compact ? 80 : 110) * (g.hero ? 1 : .7), 14, Math.PI / 9, .55, 1.6);
     // Luz lateral alta desde el recorrido: modela el rostro y deja sombra en el muro.
-    const side = 1; // desde la derecha y el recorrido, hacia el muro del fondo
+    const side = g.x < 0 ? 1 : -1;
     key.position.set(g.x + side * 3.9, 7.4, g.z + 2.2); key.target.position.set(g.x, g.plinth + 1.5, g.z);
     key.castShadow = !compact && g.hero; key.userData.heroShadow = g.hero; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -.0002; key.shadow.normalBias = .02; key.shadow.radius = 2;
     key.shadow.camera.near = 2; key.shadow.camera.far = 14;
@@ -133,25 +113,24 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
     }, undefined, () => resolve(null));
   })));
 
-  /* Piezas de la colección: estatuas sobre peana y relieves colgados en el muro del fondo. */
-  PIEZAS.forEach(p => {
-    const root = new THREE.Group(); scene.add(root);
-    const info = GOD_INFO[p.id];
-    if (p.wall) { root.position.set(p.x, p.y, G.back + .02); }
-    else {
-      root.position.set(p.x, p.outside ? 0 : 0, p.z); root.rotation.y = p.rot;
-      pedestal(root, { greek: info.greek, motto: p.label, plinth: p.plinth, pw: p.pw });
-      contactShadow(p.x, p.z, p.pw * 1.8);
-    }
-    const H = p.wall ? p.height : p.plinth + p.height;
-    const hit = new THREE.Mesh(new THREE.BoxGeometry(p.wall ? p.height * 1.3 : p.pw + .3, H + .3, p.wall ? .5 : p.pw + .3), new THREE.MeshBasicMaterial({ visible: false }));
-    hit.position.y = p.wall ? p.height / 2 : H / 2; root.add(hit); hits.push({ mesh: hit, god: p.id, root, piece: true });
-    loader.load(`assets/piezas/${p.id}${compact ? '-movil' : ''}.glb`, gltf => {
-      const statue = new THREE.Group(); statue.position.y = p.wall ? 0 : p.plinth; statue.scale.setScalar(p.height);
-      gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = !p.wall; o.receiveShadow = true; o.material = sculptMarble; } });
-      statue.add(gltf.scene); root.add(statue);
-    });
-  });
+  /* Relieve de Atenea tallado a partir del retrato: la misma cara, el pelo, la corona y el broche del dibujo. */
+  {
+    const R = { x: -5.84, y: 3.67, z: -4.7, w: 1.62, h: 2.36 };
+    const g = new THREE.Group(); g.position.set(R.x, R.y, R.z); g.rotation.y = Math.PI / 2; scene.add(g);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(R.w + .2, R.h + .2, .1), M.marble); frame.castShadow = frame.receiveShadow = true; g.add(frame);
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(R.w + .02, R.h + .02, .1), M.marbleWarm); ground.position.z = .02; g.add(ground);
+    const tex = (name, srgb) => { const t = loadTex(`assets/atenea-relieve/relieve-${name}`, srgb); return t; };
+    const seg = compact ? [70, 102] : [150, 218];
+    const relief = new THREE.Mesh(new THREE.PlaneGeometry(R.w, R.h, ...seg), new THREE.MeshStandardMaterial({
+      color: '#f2eadf', map: tex('patina.jpg', true), normalMap: tex('normal.jpg', false), normalScale: new THREE.Vector2(1.1, 1.1),
+      displacementMap: tex('altura.png', false), displacementScale: .075, roughness: .55, envMapIntensity: .8
+    }));
+    relief.position.z = .072; relief.castShadow = relief.receiveShadow = true; g.add(relief);
+    const lamp = new THREE.SpotLight('#ffe6c4', compact ? 40 : 55, 7, Math.PI / 7, .6, 1.6);
+    lamp.position.set(R.x + 2.6, 6.6, R.z + 1.6); lamp.target.position.set(R.x, R.y, R.z); scene.add(lamp, lamp.target);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(R.w, R.h, .3), new THREE.MeshBasicMaterial({ visible: false })); g.add(hit);
+    hits.push({ mesh: hit, god: 'atenea', root: g });
+  }
 
   return { hits, ready, pieces, redraw() { labels.forEach(f => f()); } };
 }
@@ -166,7 +145,7 @@ export const GOD_INFO = {
       'Es mi diosa favorita. Me gusta mucho la sabiduría y la mitología griega, y Atenea reúne las dos cosas: pensar antes de actuar, aprender y crear con oficio. Por eso es el símbolo principal de este templo y preside la sala de mi primer proyecto.'
     ],
     listTitle: 'En esta sala',
-    list: ['Estatua de cuerpo entero creada para este museo a partir de una hoja de referencia con vistas frontal, de perfil y trasera', 'Quitón ceñido bajo el pecho, escote drapeado con broche, brazalete de greca, trenza y corona de laurel', 'La acompañan la Atenea del frontón de Egina y la Atenea del Altar de Pérgamo']
+    list: ['Relieve de mármol tallado a partir del retrato a lápiz: su rostro, su corona de laurel y su broche', 'Busto de Atenea modelado para este museo con los rasgos del mismo retrato y el trazo pintado en el rostro, como la policromía de las estatuas griegas', 'Atributos: el búho, el olivo, la lanza y la égida']
   },
   hermes: {
     title: 'Hermes', inv: 'Ἑρμῆς · Sala II', accent: '#8db4ff',
@@ -185,33 +164,5 @@ export const GOD_INFO = {
       'Preside la sala de lo que viene: aquí se forjan los próximos proyectos.'
     ],
     listTitle: 'La escultura', list: ['Modelada para este museo: herrero barbudo con píleo y exomis', 'Atributos: el martillo, las tenazas y el yunque']
-  },
-  'atenea-egina': { title: 'Atenea del frontón de Egina', greek: 'ΑΘΗΝΑ', inv: 'ΑΘΗΝΑ · Sala I', accent: '#d8b46a', piece: true,
-    text: ['Templo de Afaya, en la isla de Egina, hacia el 500 a. C. El original está en la Gliptoteca de Múnich.', 'Atenea preside en el frontón la guerra de Troya: de pie entre los guerreros, con el casco, la lanza y la égida, decide sin moverse quién gana.'], listTitle: 'La pieza', list: ['Mármol de Paros pintado en origen', 'Estilo arcaico tardío: la sonrisa y los pliegues rígidos', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'atenea-pergamo': { title: 'Atenea en el Altar de Pérgamo', greek: 'ΑΘΗΝΑ', inv: 'ΑΘΗΝΑ · Sala I', accent: '#d8b46a', piece: true,
-    text: ['Friso de la Gigantomaquia del Altar de Pérgamo, hacia el 170 a. C. El original está en el Museo de Pérgamo de Berlín.', 'Atenea arrastra por el pelo al gigante Alcioneo y lo separa de su madre, Gea, que surge del suelo suplicando; Nike vuela para coronarla. Es la batalla de los dioses contra los gigantes, la misma escala épica que inspira a God of War.'], listTitle: 'La pieza', list: ['Relieve helenístico de gran tamaño', 'Gea, Alcioneo, Atenea y Nike', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'discobolo': { title: 'Discóbolo', greek: 'ΔΙΣΚΟΒΟΛΟΣ', inv: 'ΔΙΣΚΟΒΟΛΟΣ · Sala II', accent: '#8db4ff', piece: true,
-    text: ['Mirón lo fundió en bronce hacia el 450 a. C.; lo conocemos por copias romanas en mármol.', 'El atleta está congelado en el instante antes de soltar el disco: todo el cuerpo es un muelle.'], listTitle: 'La pieza', list: ['Copia de un original de Mirón', 'Uno de los cuerpos en movimiento más famosos del arte clásico', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'lapita-centauro': { title: 'Metopa del Partenón: lápita y centauro', greek: 'ΜΕΤΟΠΗ', inv: 'ΜΕΤΟΠΗ · Sala II', accent: '#8db4ff', piece: true,
-    text: ['Metopa sur del Partenón, hacia el 440 a. C., hoy en el Museo Británico.', 'Un lápita salta sobre el lomo de un centauro en la Centauromaquia, la lucha que los atenienses leían como el orden contra el caos.'], listTitle: 'La pieza', list: ['Relieve del templo de Atenea en la Acrópolis', 'Taller de Fidias', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'guerrero-carrera': { title: 'Guerrero a la carrera', greek: 'ΠΟΛΕΜΙΣΤΗΣ', inv: 'ΠΟΛΕΜΙΣΤΗΣ · Sala II', accent: '#8db4ff', piece: true,
-    text: ['Frontón del templo de Afaya en Egina, hacia el 490 a. C.', 'Un guerrero se lanza al ataque en el combate ante Troya; las figuras se adaptaban al triángulo del frontón.'], listTitle: 'La pieza', list: ['Gliptoteca de Múnich', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'gladiador-borghese': { title: 'Gladiador Borghese', greek: 'ΑΓΑΣΙΑΣ', inv: 'ΑΓΑΣΙΑΣ · Sala III', accent: '#e0894a', piece: true,
-    text: ['Firmado por Agasias de Éfeso hacia el 100 a. C.; está en el Louvre.', 'No es un gladiador sino un guerrero que alza el escudo contra un jinete y prepara el golpe. Cada músculo está en tensión.'], listTitle: 'La pieza', list: ['Mármol helenístico', 'Modelo de anatomía para artistas durante siglos', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'centauro-lapita': { title: 'Metopa del Partenón: centauro y lápita', greek: 'ΜΕΤΟΠΗ', inv: 'ΜΕΤΟΠΗ · Sala III', accent: '#e0894a', piece: true,
-    text: ['Metopa sur del Partenón, hacia el 440 a. C.', 'Un centauro levanta un ánfora para lanzarla contra un lápita durante la boda de Pirítoo, que acabó en batalla.'], listTitle: 'La pieza', list: ['Museo Británico', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'guerrero-escudo': { title: 'Guerrero con escudo', greek: 'ΟΠΛΙΤΗΣ', inv: 'ΟΠΛΙΤΗΣ · Sala III', accent: '#e0894a', piece: true,
-    text: ['Frontón del templo de Afaya en Egina, hacia el 490 a. C.', 'Un hoplita con casco corintio avanza cubierto por su escudo redondo.'], listTitle: 'La pieza', list: ['Gliptoteca de Múnich', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'arquero': { title: 'Arquero arrodillado', greek: 'ΤΟΞΟΤΗΣ', inv: 'ΤΟΞΟΤΗΣ · Sala III', accent: '#e0894a', piece: true,
-    text: ['Frontón del templo de Afaya en Egina, hacia el 490 a. C.', 'Rodilla en tierra y brazos extendidos, apunta un arco que se ha perdido.'], listTitle: 'La pieza', list: ['Gliptoteca de Múnich', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'escudo-strangford': { title: 'Escudo Strangford', greek: 'ΑΣΠΙΣ', inv: 'ΑΣΠΙΣ · Sala III', accent: '#e0894a', piece: true,
-    text: ['Copia romana del escudo de la Atenea Pártenos de Fidias, la gran estatua de oro y marfil del Partenón.', 'Muestra la Amazonomaquia, la batalla de los atenienses contra las amazonas.'], listTitle: 'La pieza', list: ['Museo Británico', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'poseidon': { title: 'Poseidón del cabo Artemisio', greek: 'ΠΟΣΕΙΔΩΝ', inv: 'ΠΟΣΕΙΔΩΝ · Salida', accent: '#d8b46a', piece: true,
-    text: ['Bronce de hacia el 460 a. C. rescatado del mar frente al cabo Artemisio; está en el Museo Arqueológico Nacional de Atenas.', 'No se sabe si es Zeus a punto de lanzar el rayo o Poseidón con su tridente. En God of War III, Poseidón es el primer dios al que se enfrenta Kratos.'], listTitle: 'La pieza', list: ['Bronce griego original', 'Más de dos metros de envergadura', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'laocoonte': { title: 'Laocoonte y sus hijos', greek: 'ΛΑΟΚΟΩΝ', inv: 'ΛΑΟΚΟΩΝ · Salida', accent: '#d8b46a', piece: true,
-    text: ['Obra de Agesandro, Atenodoro y Polidoro de Rodas; está en los Museos Vaticanos.', 'El sacerdote troyano que advirtió contra el caballo de madera muere con sus hijos atrapado por las serpientes que enviaron los dioses.'], listTitle: 'La pieza', list: ['Escultura helenística', 'Descubierta en Roma en 1506', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'ares-ludovisi': { title: 'Ares Ludovisi', greek: 'ΑΡΗΣ', inv: 'ΑΡΗΣ · Salida', accent: '#d8b46a', piece: true,
-    text: ['Copia romana de un original griego del siglo IV a. C.; está en el Palazzo Altemps de Roma.', 'El dios de la guerra descansa con el escudo a sus pies. En God of War, Kratos mata a Ares para salvar Atenas y ocupa su trono.'], listTitle: 'La pieza', list: ['Mármol', 'Un pequeño Eros juega a sus pies', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] },
-  'cariatide': { title: 'Cariátide del Erecteion', greek: 'ΚΑΡΥΑΤΙΣ', inv: 'ΚΑΡΥΑΤΙΣ · Pórtico', accent: '#d8b46a', piece: true,
-    text: ['El Pórtico de las Cariátides del Erecteion, en la Acrópolis de Atenas, hacia el 420 a. C.', 'Seis muchachas sostienen el techo con la cabeza. Aquí guardan la puerta del museo.'], listTitle: 'La pieza', list: ['Museo de la Acrópolis y Museo Británico', 'Escaneo 3D de un vaciado de la Colección Real de Vaciados (SMK, Copenhague), de dominio público.'] }
+  }
 };
