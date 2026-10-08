@@ -50,7 +50,7 @@ for o in joined.values():
     select_only([o])
     bpy.ops.object.bake(type='AO', target='VERTEX_COLORS')
 
-kw = dict(filepath=os.path.abspath(DST), export_format='GLB', export_apply=True, export_yup=True, export_texcoords=False, export_normals=True, export_materials='EXPORT')
+kw = dict(filepath=os.path.abspath(DST), export_format='GLB', export_apply=True, export_yup=True, export_texcoords=os.environ.get('TEXCOORDS') == '1', export_normals=True, export_materials='EXPORT')
 try: bpy.ops.export_scene.gltf(**kw, export_vertex_color='ACTIVE', export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=7, export_draco_position_quantization=14, export_draco_normal_quantization=10, export_draco_color_quantization=8)
 except TypeError as e:
     print('sin draco', e); bpy.ops.export_scene.gltf(**kw)
