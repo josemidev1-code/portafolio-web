@@ -10,14 +10,14 @@ Un museo digital de inspiración griega, ambientado en la saga griega de God of 
 - **Arquitectura** (`greek-temple.js`): pórtico dórico hexástilo sobre crepidoma, columnas de veinte estrías con éntasis, anillos, equino y ábaco, entablamento con triglifos, gotas y mútulos, frontón con escudo y corona de olivo, acroteras, muros de sillería con zócalo de ortostatos, techo de casetones pintados con estrellas doradas, lucernarios con haces de luz, puertas de bronce y cielo crepuscular.
 - **Materiales** (`materials.js`): mármol veteado, sillería, losas y bronce con pátina, generados en canvas con ruido periódico (color, rugosidad y relieve) y proyectados en metros reales para que no se estiren.
 - **Dioses** (`gods.js`): una escultura por sala, con pedestal, inscripción griega, focos propios y una ficha interactiva (quiénes eran, su papel en God of War y por qué están aquí).
-  - Sala I: Atenea de la sabiduría, modelada para el museo a partir del retrato de referencia (`assets/atenea-sabiduria/`, scripts en `tools/esculturas/`), y Atenea guerrera, escaneada (`assets/athena/`).
+  - Sala I: busto de Atenea modelado a partir del retrato de referencia (`assets/atenea-busto/`) y relieve de mármol tallado del mismo dibujo (`assets/atenea-relieve/`); scripts en `tools/esculturas/`.
   - Sala II: Hermes, escaneado (`assets/hermes/`).
   - Sala III: Hefesto, modelado (`assets/hefesto/`).
 - **Ágora y Atenas** (`athens.js`): plaza con mosaico, cipreses, propileo y el muro grabado con mi presentación (interactivo). Alrededor, Atenas sobre colinas con casas, templos menores, cipreses y luces de ventanas al anochecer.
 - **Fuego** (`fire.js`): braseros trípode de bronce, llamas con ruido animado en el sombreador (cinco capas con ritmos propios), brasas, humo y luz que titila de forma irregular.
 - **Cerámica** (`pottery.js`): ánfora de cuello, ánfora de vientre, crátera de cáliz e hidria, con figuras negras o rojas, grecas, lengüetas, rayos y desgaste pintados en canvas.
 - **Cámara libre en PC** (`free-camera.js`, `navigation.js`): WASD, mirada al arrastrar el ratón, Q/E para altura, Mayús para correr y Esc para regresar al recorrido. Incluye límites de fachada, puertas y urnas.
-- **Ambientación** (`mythology.js`): placas de bronce de Atenea, Hermes y Hefesto y estandartes carmesí.
+- **Ambientación** (`mythology.js`): placas de bronce de Hermes y Hefesto (el relieve de Atenea ocupa su muro) y estandartes carmesí.
 - **Renderizado** (`cinematic.js`): oclusión ambiental en pantalla y desenfoque de cámara calculados con la profundidad. Los textos y botones permanecen nítidos.
 - **Calidad gráfica** (`quality.js`): al cargar se lee la tarjeta gráfica, los núcleos y la memoria del equipo y se elige calidad alta, media o baja. Si después no se alcanzan unos 30 fps, baja un nivel (y luego la resolución) y lo recuerda para la próxima visita. El botón «Gráficos» permite fijarla a mano. La calidad baja pinta la escena sin posproceso, a menor resolución, con menos luces de relleno y con sombras que se recalculan cada pocos fotogramas, y carga la geometría y las esculturas ligeras.
 - **Movimiento** (`motion.js`): amortiguación del avance y curvas de aceleración, independientes de la tasa de fotogramas.
