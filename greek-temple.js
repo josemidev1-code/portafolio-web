@@ -244,7 +244,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   // Tramos libres de cada muro entre pilastras y portadas.
   const segments = [[3.4, -2.6], [-3.4, -8.6], [-11.3, -14.6], [-15.4, -20.6], [-23.3, -26.6], [-27.4, -32.6], [-33.4, -38.6], [-39.4, -45.8]];
   // Lo que ya cuelga en cada muro (placas, estandartes, rótulos): ahí el panel queda liso.
-  const hung = { '-1': [[-4.9, 1.1], [-7.9, .6], [-16.9, 1.1], [-19.9, .6], [-28.9, 1.1], [-31.9, .6]], '1': [[-6, 2.4], [-18, 2.4], [-30, 2.4]] };
+  const hung = { '-1': [[-4.7, 1.0], [-7.9, .6], [-16.9, 1.1], [-19.9, .6], [-28.9, 1.1], [-31.9, .6]], '1': [[-6, 2.4], [-18, 2.4], [-30, 2.4]] };
   const roomOf = z => z > -11 ? 'atenea' : z > -23 ? 'hermes' : z > -35 ? 'hefesto' : 'duelo';
   const muralCache = new Map(), muralMats = [];
   const muralMat = (kind, seed) => {

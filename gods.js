@@ -113,6 +113,25 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
     }, undefined, () => resolve(null));
   })));
 
+  /* Relieve de Atenea tallado a partir del retrato: la misma cara, el pelo, la corona y el broche del dibujo. */
+  {
+    const R = { x: -5.84, y: 3.67, z: -4.7, w: 1.62, h: 2.36 };
+    const g = new THREE.Group(); g.position.set(R.x, R.y, R.z); g.rotation.y = Math.PI / 2; scene.add(g);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(R.w + .2, R.h + .2, .1), M.marble); frame.castShadow = frame.receiveShadow = true; g.add(frame);
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(R.w + .02, R.h + .02, .1), M.marbleWarm); ground.position.z = .02; g.add(ground);
+    const tex = (name, srgb) => { const t = loadTex(`assets/atenea-relieve/relieve-${name}`, srgb); return t; };
+    const seg = compact ? [70, 102] : [150, 218];
+    const relief = new THREE.Mesh(new THREE.PlaneGeometry(R.w, R.h, ...seg), new THREE.MeshStandardMaterial({
+      color: '#f2eadf', map: tex('patina.jpg', true), normalMap: tex('normal.jpg', false), normalScale: new THREE.Vector2(1.1, 1.1),
+      displacementMap: tex('altura.png', false), displacementScale: .075, roughness: .55, envMapIntensity: .8
+    }));
+    relief.position.z = .072; relief.castShadow = relief.receiveShadow = true; g.add(relief);
+    const lamp = new THREE.SpotLight('#ffe6c4', compact ? 40 : 55, 7, Math.PI / 7, .6, 1.6);
+    lamp.position.set(R.x + 2.6, 6.6, R.z + 1.6); lamp.target.position.set(R.x, R.y, R.z); scene.add(lamp, lamp.target);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(R.w, R.h, .3), new THREE.MeshBasicMaterial({ visible: false })); g.add(hit);
+    hits.push({ mesh: hit, god: 'atenea', root: g });
+  }
+
   return { hits, ready, pieces, redraw() { labels.forEach(f => f()); } };
 }
 
@@ -126,7 +145,7 @@ export const GOD_INFO = {
       'Es mi diosa favorita. Me gusta mucho la sabiduría y la mitología griega, y Atenea reúne las dos cosas: pensar antes de actuar, aprender y crear con oficio. Por eso es el símbolo principal de este templo y preside la sala de mi primer proyecto.'
     ],
     listTitle: 'En esta sala',
-    list: ['Busto de Atenea modelado para este museo a partir de un retrato a lápiz: corona de laurel, cabello ondulado y himatión sujeto con un broche de oro', 'El rostro lleva pintado el trazo del retrato, como los ojos y labios pintados de las estatuas griegas', 'Atributos: el búho, el olivo, la lanza y la égida']
+    list: ['Relieve de mármol tallado a partir del retrato a lápiz: su rostro, su corona de laurel y su broche', 'Busto de Atenea modelado para este museo con los rasgos del mismo retrato y el trazo pintado en el rostro, como la policromía de las estatuas griegas', 'Atributos: el búho, el olivo, la lanza y la égida']
   },
   hermes: {
     title: 'Hermes', inv: 'Ἑρμῆς · Sala II', accent: '#8db4ff',

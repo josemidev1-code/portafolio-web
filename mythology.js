@@ -1,7 +1,7 @@
 /** Placas de bronce de Atenea, Hermes y Hefesto y estandartes carmesí de las salas. */
 export function addMythology(THREE, scene, canvasTex, compact, M) {
-  const panels = [{ name: 'ATENEA', caption: 'SABIDURÍA · SALA I', z: -4.9, side: -1, icon: 'owl' },
-    { name: 'HERMES', caption: 'INGENIO · SALA II', z: -16.9, side: -1, icon: 'wings' },
+  // En la Sala I el muro lo ocupa el relieve de Atenea (gods.js).
+  const panels = [{ name: 'HERMES', caption: 'INGENIO · SALA II', z: -16.9, side: -1, icon: 'wings' },
     { name: 'HEFESTO', caption: 'CREACIÓN · SALA III', z: -28.9, side: -1, icon: 'hammer' }];
   function drawIcon(g, icon, x, y) {
     g.save(); g.translate(x, y); g.lineWidth = 6; g.lineCap = 'round'; g.lineJoin = 'round';
