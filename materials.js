@@ -61,11 +61,12 @@ function marbleField(size, seed, { veins = 3.2, turbulence = 2.6, sharp = 9 } = 
 }
 
 export function createMaterials(THREE, { compact = false } = {}) {
-  const S = compact ? 512 : 768;
+  const S = compact ? 512 : 768, S0 = S;
   const cache = {};
 
   /* Mármol pentélico: blanco cálido, vetas grises y alguna oxidación dorada. */
-  function marbleSet(seed, tint, veinColor, { veins, sharp } = {}) {
+  function marbleSet(seed, tint, veinColor, { veins, sharp, size } = {}) {
+    const S = size || S0;
     const { vein, cloud } = marbleField(S, seed, { veins, sharp });
     const grain = fbmField(S, { period: 32, octaves: 2, seed: seed + 3 });
     const col = canvas(S), rough = canvas(S), bump = canvas(S);
@@ -172,6 +173,33 @@ export function createMaterials(THREE, { compact = false } = {}) {
     return new THREE.MeshStandardMaterial({ color, map: texture(THREE, b.col, { repeat }), roughnessMap: orm, metalnessMap: orm, metalness: 1, roughness: 1, envMapIntensity: 1.4 });
   }
 
+  /* Interior del templo, a la manera de los palacios del Olimpo de God of War:
+     mármol rojo en los fustes, piedra clara en los muros, zócalo oscuro y suelo pulido. */
+  const half = compact ? 256 : 512;
+  const redTex = marbleSet(51, [.6, .16, .11], [.86, .55, .42], { veins: 1.8, sharp: 11, size: half });
+  const paleTex = marbleSet(61, [.82, .81, .84], [.6, .58, .64], { veins: 1.1, sharp: 20, size: half });
+  const dadoTex = marbleSet(71, [.3, .29, .32], [.62, .6, .62], { veins: 2.2, sharp: 12, size: half });
+  const polishA = marbleSet(81, [.3, .2, .14], [.5, .4, .3], { veins: 1.4, sharp: 22 });
+  const polishB = marbleSet(83, [.22, .14, .1], [.44, .34, .25], { veins: 2, sharp: 24 });
+  /* Losas pulidas de mármol oscuro: grandes, alternadas en dos tonos y con juntas finas. */
+  function polishedSlabs() {
+    const n = 2, size = S, cell = size / n;
+    const col = canvas(size), rough = canvas(size);
+    const g = col.getContext('2d'), gr = rough.getContext('2d'), random = rng(517);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const src = (x + y) % 2 ? polishB : polishA, sx = random() * (S - cell), sy = random() * (S - cell);
+      g.save(); g.translate(x * cell + cell / 2, y * cell + cell / 2); g.rotate(Math.floor(random() * 4) * Math.PI / 2);
+      g.drawImage(src.col, sx, sy, cell, cell, -cell / 2, -cell / 2, cell, cell);
+      gr.drawImage(src.rough, sx, sy, cell, cell, -cell / 2, -cell / 2, cell, cell); g.restore();
+    }
+    g.strokeStyle = 'rgba(16,10,6,.85)'; g.lineWidth = 2; gr.strokeStyle = '#999'; gr.lineWidth = 2;
+    for (let k = 0; k <= n; k++) [g, gr].forEach(c => { c.beginPath(); c.moveTo(k * cell, 0); c.lineTo(k * cell, size); c.moveTo(0, k * cell); c.lineTo(size, k * cell); c.stroke(); });
+    // Pulido de espejo: la rugosidad baja a la mitad.
+    gr.globalCompositeOperation = 'multiply'; gr.fillStyle = '#6a6a6a'; gr.fillRect(0, 0, size, size);
+    return { col, rough };
+  }
+  const polished = polishedSlabs();
+
   const wall = ashlar({ seed: 5, courses: 3, perCourse: 2, base: [.8, .75, .66], spread: .05 });
   const orthostat = ashlar({ seed: 9, courses: 1, perCourse: 2, base: [.6, .56, .5], spread: .05 });
   const floor = floorSlabs();
@@ -187,6 +215,10 @@ export function createMaterials(THREE, { compact = false } = {}) {
     gilt: new THREE.MeshStandardMaterial({ color: '#c89a52', metalness: 1, roughness: .32, envMapIntensity: 1.3 }),
     // Pigmento del techo: azul egipcio, como los restos de policromía de los templos.
     coffer: new THREE.MeshStandardMaterial({ color: '#203b5e', roughness: .8 }),
+    redMarble: marbleMaterial(redTex, { repeat: [1, 1], roughness: .9, bumpScale: .15 }),
+    paleWall: marbleMaterial(paleTex, { repeat: [1, 1], roughness: 1.7, bumpScale: .25 }),
+    dado: marbleMaterial(dadoTex, { repeat: [1, 1], roughness: .8, bumpScale: .1 }),
+    polished: new THREE.MeshStandardMaterial({ map: texture(THREE, polished.col), roughness: 1, roughnessMap: texture(THREE, polished.rough, { srgb: false }), envMapIntensity: 1.6 }),
   };
   // Ajustes de escala de textura por superficie; se clonan para no compartir `repeat`.
   M.withRepeat = (mat, rx, ry) => {

@@ -2,7 +2,9 @@
  *  techo de casetones pintados, lucernarios con haces de luz y puertas de bronce. */
 import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
 import { smootherStep } from './motion.js';
+import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/objects/Reflector.js';
 import { worldUV } from './materials.js';
+import { muralTexture } from './murals.js';
 
 // Dirección del sol: alto y desde la izquierda del pórtico, para que entre por los lucernarios.
 export const SUN_OFFSET = [-7, 22, 9];
@@ -11,7 +13,7 @@ const HALL = { x: 6, top: 8, start: 4.05, end: -46.2 };
 export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   const statics = new THREE.Group(); scene.add(statics);
   // Escala de la proyección de textura en metros reales por material.
-  const uvScale = new Map([[M.wall, [1 / 3.4, 1 / 1.7]], [M.darkStone, [1 / 3.2, 1 / 1.1]], [M.marble, [.45, .45]], [M.marbleWarm, [.4, .4]], [M.marbleGrey, [.5, .5]], [M.bronze, [.8, .8]]]);
+  const uvScale = new Map([[M.wall, [1 / 3.4, 1 / 1.7]], [M.darkStone, [1 / 3.2, 1 / 1.1]], [M.marble, [.45, .45]], [M.marbleWarm, [.4, .4]], [M.marbleGrey, [.5, .5]], [M.bronze, [.8, .8]], [M.paleWall, [.3, .3]], [M.dado, [.45, .45]], [M.redMarble, [.5, .5]]]);
 
   /* Bloques con un chaflán fino: aristas nítidas que atrapan la luz, sin aspecto blando. */
   const boxCache = new Map(), plain = new THREE.BoxGeometry(1, 1, 1);
@@ -37,23 +39,38 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   }
 
   /* ---------- Suelos ---------- */
+  // Mármol oscuro pulido en losas de dos metros, con un reflejo real en calidad alta.
   const floorGeo = new THREE.PlaneGeometry(12, HALL.start - HALL.end);
-  const floor = new THREE.Mesh(floorGeo, M.withRepeat(M.floor, 12 / 4.8, (HALL.start - HALL.end) / 4.8));
+  const floor = new THREE.Mesh(floorGeo, M.withRepeat(M.polished, 12 / 4, (HALL.start - HALL.end) / 4));
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, (HALL.start + HALL.end) / 2); floor.receiveShadow = true; scene.add(floor);
+  const mirror = new Reflector(floorGeo, {
+    textureWidth: 512, textureHeight: 512, clipBias: .003,
+    shader: {
+      name: 'ReflejoPulido',
+      uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, strength: { value: .55 } },
+      vertexShader: 'uniform mat4 textureMatrix; varying vec4 vUv; varying vec3 vWorld; void main(){ vUv = textureMatrix * vec4(position, 1.); vec4 w = modelMatrix * vec4(position, 1.); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      // Fresnel: casi espejo en ángulo rasante, apenas un velo mirando hacia abajo.
+      fragmentShader: 'uniform sampler2D tDiffuse; uniform float strength; varying vec4 vUv; varying vec3 vWorld; void main(){ vec3 r = texture2DProj(tDiffuse, vUv).rgb; vec3 v = normalize(cameraPosition - vWorld); float f = .12 + .88 * pow(1. - max(v.y, 0.), 4.); gl_FragColor = vec4(r * strength * f, 1.); }'
+    }
+  });
+  mirror.material.transparent = true; mirror.material.blending = THREE.AdditiveBlending; mirror.material.depthWrite = false;
+  mirror.rotation.x = -Math.PI / 2; mirror.position.set(0, .003, (HALL.start + HALL.end) / 2); mirror.renderOrder = 1; scene.add(mirror);
   const plaza = new THREE.Mesh(new THREE.PlaneGeometry(42.4, 43.4), M.withRepeat(M.floor, 42.4 / 7, 43.4 / 7));
   plaza.material = plaza.material.clone(); plaza.material.color.set('#8d8475'); plaza.material.roughness = 1.25;
   plaza.rotation.x = -Math.PI / 2; plaza.position.set(0, -.6, 28.9); plaza.receiveShadow = true; scene.add(plaza);
-  // Guía de bronce embutida en el pavimento hasta la última sala.
-  [-2.4, 2.4].forEach(x => box(.05, .012, 49.4, x, .002, -21, M.gilt));
+  // Filetes de oro embutidos: dos guías a lo largo, un marco junto a los muros y bandas en cada crujía.
+  [-4.7, -2.4, 2.4, 4.7].forEach(x => box(Math.abs(x) > 3 ? .09 : .06, .012, 49.4, x, .002, -21, M.gilt));
+  for (let z = -3; z > -45; z -= 6) box(9.4, .012, .09, 0, .002, z, M.gilt);
 
   /* ---------- Muros de sillería con zócalo de ortostatos ---------- */
   const wallLen = HALL.start - HALL.end, wallZ = (HALL.start + HALL.end) / 2;
   [-1, 1].forEach(s => {
-    box(.4, HALL.top, wallLen, s * (HALL.x + .2), HALL.top / 2, wallZ, M.wall);
-    box(.1, 1.15, wallLen, s * (HALL.x - .05), .575, wallZ, M.darkStone);         // ortostatos
+    box(.4, HALL.top, wallLen, s * (HALL.x + .2), HALL.top / 2, wallZ, M.paleWall);
+    box(.1, 1.15, wallLen, s * (HALL.x - .05), .575, wallZ, M.dado);               // zócalo oscuro pulido
     box(.2, .14, wallLen, s * (HALL.x - .1), .07, wallZ, M.marbleGrey);            // plinto
     box(.16, .07, wallLen, s * (HALL.x - .08), 1.18, wallZ, M.marble);             // cimacio
-    box(.06, .04, wallLen, s * (HALL.x - .03), 1.05, wallZ, M.marble);
+    box(.03, .035, wallLen, s * (HALL.x - .165), 1.235, wallZ, M.gilt);           // filete de oro
+    box(.03, .035, wallLen, s * (HALL.x - .27), 6.38, wallZ, M.gilt);             // filete bajo el arquitrabe
     // Entablamento interior: arquitrabe con tenia, friso dórico y cornisa con mútulos.
     box(.26, .56, wallLen, s * (HALL.x - .13), 6.68, wallZ, M.marble);
     box(.32, .07, wallLen, s * (HALL.x - .16), 6.995, wallZ, M.marble);
@@ -198,12 +215,63 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   for (let z = 4.2; z <= 6.4; z += 1.1) box(17.4, .22, .16, 0, F.top - .11, z, M.marble);
   box(17.6, .1, 3.4, 0, F.top + .02, 5.05, M.coffer);
 
-  /* ---------- Interior: columnata ---------- */
-  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => column(s * 5.05, z, { height: 6.4, r: .4 }));
-  // Pilastras (antas) en los muros, frente a cada columna.
-  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => box(.16, 6.4, .8, s * (HALL.x - .08), 3.2, z, M.marble));
-  box(12.8, HALL.top, .4, 0, HALL.top / 2, HALL.end, M.wall);
-  box(12, 1.15, .1, 0, .575, HALL.end + .25, M.darkStone);
+  /* ---------- Interior: columnata de mármol rojo con basas y capiteles de oro ---------- */
+  function redColumn(x, z, height = 6.4) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); statics.add(g);
+    const r = .36, shaftH = height - .62;
+    box(1.02, .2, 1.02, 0, .1, 0, M.marbleGrey, g);                                       // plinto
+    const lathe = (pts, mat, y) => { const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([a, b]) => new THREE.Vector2(a, b)), compact ? 32 : 64), mat); m.position.y = y; m.userData.keepUV = true; m.castShadow = m.receiveShadow = true; g.add(m); };
+    // Basa ática dorada: toro, escocia y toro.
+    lathe([[.47, 0], [.5, .04], [.49, .09], [.44, .12], [.41, .14], [.4, .19], [.43, .22], [.44, .25], [.41, .28], [r, .3]], M.gilt, .2);
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(r * .86, r, shaftH - .5, compact ? 32 : 64, 1), M.redMarble);
+    shaft.position.y = .5 + (shaftH - .5) / 2; shaft.castShadow = shaft.receiveShadow = true; g.add(shaft);
+    // Capitel: astrágalo, equino y ábaco de oro.
+    lathe([[r * .86, 0], [r * .95, .03], [r * .86, .06], [r * .9, .1], [r * 1.12, .2], [r * 1.34, .3], [r * 1.4, .34]], M.gilt, shaftH);
+    box(r * 3, .18, r * 3, 0, height - .1 - .1, 0, M.gilt, g);
+    box(r * 3.2, .08, r * 3.2, 0, height - .04, 0, M.marble, g);
+    contactShadow(x, z, 2, 2, .006);
+  }
+  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => redColumn(s * 5.05, z));
+  // Pilastras de piedra clara frente a cada columna, con basa y capitel dorados.
+  for (let z = -3; z > -43; z -= 6) [-1, 1].forEach(s => {
+    box(.18, 6.4, .8, s * (HALL.x - .09), 3.2, z, M.paleWall);
+    box(.26, .3, .92, s * (HALL.x - .13), .35, z, M.gilt); box(.28, .36, .96, s * (HALL.x - .14), 6.12, z, M.gilt);
+  });
+  box(12.8, HALL.top, .4, 0, HALL.top / 2, HALL.end, M.paleWall);
+  box(12, 1.15, .1, 0, .575, HALL.end + .25, M.dado);
+
+  /* ---------- Paneles y murales de oro en los muros ---------- */
+  // Tramos libres de cada muro entre pilastras y portadas.
+  const segments = [[3.4, -2.6], [-3.4, -8.6], [-11.3, -14.6], [-15.4, -20.6], [-23.3, -26.6], [-27.4, -32.6], [-33.4, -38.6], [-39.4, -45.8]];
+  // Lo que ya cuelga en cada muro (placas, estandartes, rótulos): ahí el panel queda liso.
+  const hung = { '-1': [[-4.9, 1.1], [-7.9, .6], [-16.9, 1.1], [-19.9, .6], [-28.9, 1.1], [-31.9, .6]], '1': [[-6, 2.4], [-18, 2.4], [-30, 2.4]] };
+  const roomOf = z => z > -11 ? 'atenea' : z > -23 ? 'hermes' : z > -35 ? 'hefesto' : 'duelo';
+  const muralCache = new Map(), muralMats = [];
+  const muralMat = (kind, seed) => {
+    const key = kind + seed % 2; if (muralCache.has(key)) return muralCache.get(key);
+    const m = new THREE.MeshStandardMaterial({ map: muralTexture(THREE, kind, seed, compact), roughness: .5, metalness: .35, envMapIntensity: 1.2 });
+    muralCache.set(key, m); muralMats.push(m); return m;
+  };
+  let muralSeed = 0;
+  [-1, 1].forEach(s => segments.forEach(([a, b]) => {
+    const L = a - b, n = Math.max(1, Math.round(L / 2.7)), cell = L / n;
+    for (let k = 0; k < n; k++) {
+      const z = a - cell * (k + .5), pw = cell - .55, y0 = 1.62, y1 = 5.72, ph = y1 - y0, x = s * (HALL.x - .02);
+      // Marco de dos molduras en relieve.
+      [[.07, 0], [.04, .14]].forEach(([t, inset]) => {
+        box(.06 + t * .4, t, pw - inset * 2, x - s * (.03 + t * .2), y1 - inset, z, M.marble); box(.06 + t * .4, t, pw - inset * 2, x - s * (.03 + t * .2), y0 + inset, z, M.marble);
+        [-1, 1].forEach(e => box(.06 + t * .4, ph - inset * 2, t, x - s * (.03 + t * .2), (y0 + y1) / 2, z + e * (pw / 2 - inset), M.marble));
+      });
+      const busy = hung[s].some(([hz, hw]) => Math.abs(hz - z) < hw + pw / 2 - .2);
+      if (busy || pw < 1.2) continue;
+      const kind = muralSeed % 3 === 1 ? 'hoplita' : roomOf(z);
+      const w = Math.min(pw - .42, 1.9), h = Math.min(ph - .5, w * 1.7);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(.05, h + .12, w + .12), M.darkGilt); frame.position.set(x - s * .05, (y0 + y1) / 2, z); frame.castShadow = true; scene.add(frame);
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(w, h), muralMat(kind, muralSeed));
+      art.position.set(x - s * .078, (y0 + y1) / 2, z); art.rotation.y = -s * Math.PI / 2; scene.add(art);
+      muralSeed++;
+    }
+  }));
   box(12, .56, .26, 0, 6.68, HALL.end + .33, M.marble); box(12, .58, .18, 0, 7.32, HALL.end + .29, M.marbleWarm); box(12, .26, .5, 0, 7.74, HALL.end + .45, M.marble);
 
   /* ---------- Techo de casetones con lucernarios ---------- */
@@ -267,8 +335,8 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
     box(width + .5, .05, .7, 0, .025, z, M.marbleGrey);
     if (!front) {
       const sideW = HALL.x - half - .32;
-      [-1, 1].forEach(side => { box(sideW, HALL.top, .36, side * (half + .32 + sideW / 2), HALL.top / 2, z, M.wall); box(sideW, 1.15, .46, side * (half + .32 + sideW / 2), .575, z, M.darkStone); });
-      box(width + .64, HALL.top - height - .34, .36, 0, (HALL.top + height + .34) / 2, z, M.wall);
+      [-1, 1].forEach(side => { box(sideW, HALL.top, .36, side * (half + .32 + sideW / 2), HALL.top / 2, z, M.paleWall); box(sideW, 1.15, .46, side * (half + .32 + sideW / 2), .575, z, M.dado); });
+      box(width + .64, HALL.top - height - .34, .36, 0, (HALL.top + height + .34) / 2, z, M.paleWall);
     }
     const hinges = [];
     [-1, 1].forEach(side => {
@@ -301,7 +369,9 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
       });
       hinges.push({ pivot, side });
     });
-    doors.push({ z, hinges, angle: 0 });
+    // La puerta principal se abre hacia el pórtico; las interiores, hacia la sala siguiente,
+    // así las hojas nunca barren el espacio de las esculturas que quedan atrás.
+    doors.push({ z, hinges, angle: 0, dir: front ? 1 : -1 });
   }
   portal(F.wallZ, 4.6, 5.8, true); portal(-11, 6.6, 6.45); portal(-23, 6.6, 6.45);
 
@@ -356,7 +426,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   scene.remove(statics);
 
   return {
-    sun, skylights, box, column, contactShadow,
+    sun, skylights, box, column, contactShadow, mirror,
     update(camera, dt, reduce, t) {
       sky.position.copy(camera.position); ridge.position.set(camera.position.x, 14, camera.position.z);
       shaftMat.uniforms.uTime.value = t || 0;
@@ -364,7 +434,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
         const progress = smootherStep((d.z + 14 - camera.position.z) / 11);
         const target = progress * Math.PI * .48;
         d.angle = reduce ? target : THREE.MathUtils.damp(d.angle, target, 3.8, dt);
-        d.hinges.forEach(({ pivot, side }) => pivot.rotation.y = side * d.angle);
+        d.hinges.forEach(({ pivot, side }) => pivot.rotation.y = side * d.dir * d.angle);
       });
     }
   };

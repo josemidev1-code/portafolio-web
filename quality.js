@@ -4,9 +4,9 @@ export const LEVELS = ['baja', 'media', 'alta'];
 
 // Qué activa cada nivel. Todo se puede cambiar en caliente salvo la geometría «compacta».
 export const PRESETS = {
-  alta:  { pixelCap: 1.75, scale: 1,  post: true,  ao: 6, blur: true,  samples: 2, sunMap: 2048, heroShadow: true,  extraLights: true,  shadowEvery: 1, dust: true },
-  media: { pixelCap: 1.25, scale: 1,  post: true,  ao: 4, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: true,  shadowEvery: 1, dust: true },
-  baja:  { pixelCap: 1,    scale: .85, post: false, ao: 0, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: false, shadowEvery: 6, dust: false }
+  alta:  { pixelCap: 1.75, scale: 1,  post: true,  ao: 6, blur: true,  samples: 2, sunMap: 2048, heroShadow: true,  extraLights: true,  shadowEvery: 1, dust: true, reflect: true },
+  media: { pixelCap: 1.25, scale: 1,  post: true,  ao: 4, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: true,  shadowEvery: 1, dust: true, reflect: false },
+  baja:  { pixelCap: 1,    scale: .85, post: false, ao: 0, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: false, shadowEvery: 6, dust: false, reflect: false }
 };
 
 const KEY = 'museo-calidad', AUTO_KEY = 'museo-calidad-auto';

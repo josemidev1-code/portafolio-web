@@ -14,7 +14,7 @@ const SHAPES = {
 };
 
 /* Figuras en silueta con trazos gruesos: guerreros, corredores, búho y ramas de olivo. */
-function hoplite(g, x, ground, s, dir, fill, detail) {
+export function hoplite(g, x, ground, s, dir, fill, detail) {
   g.save(); g.translate(x, ground); g.scale(dir * s, s); g.lineCap = 'round'; g.lineJoin = 'round';
   g.strokeStyle = fill; g.fillStyle = fill;
   g.lineWidth = 9; g.beginPath(); g.moveTo(-6, -70); g.lineTo(-22, -32); g.lineTo(-34, 0); g.moveTo(4, -70); g.lineTo(20, -36); g.lineTo(32, 0); g.stroke(); // piernas en lunge
@@ -27,7 +27,7 @@ function hoplite(g, x, ground, s, dir, fill, detail) {
   g.beginPath(); g.arc(20, -100, 9, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(-6, -142); g.lineTo(8, -142); g.stroke();                                  // incisiones
   g.restore();
 }
-function runner(g, x, ground, s, phase, fill, detail) {
+export function runner(g, x, ground, s, phase, fill, detail) {
   g.save(); g.translate(x, ground); g.scale(s, s); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = fill; g.fillStyle = fill;
   const a = phase;
   g.lineWidth = 8.5; g.beginPath(); g.moveTo(0, -72); g.lineTo(26 * Math.cos(a), -38); g.lineTo(30 * Math.cos(a) + 14, 0);
@@ -38,7 +38,7 @@ function runner(g, x, ground, s, phase, fill, detail) {
   g.strokeStyle = detail; g.lineWidth = 1.8; g.beginPath(); g.moveTo(-2, -116); g.quadraticCurveTo(8, -100, 2, -82); g.stroke();
   g.restore();
 }
-function owl(g, x, ground, s, fill, detail) {
+export function owl(g, x, ground, s, fill, detail) {
   g.save(); g.translate(x, ground); g.scale(s, s); g.fillStyle = fill; g.strokeStyle = detail;
   g.beginPath(); g.ellipse(0, -55, 30, 50, 0, 0, Math.PI * 2); g.fill();
   g.beginPath(); g.moveTo(-26, -88); g.lineTo(-30, -112); g.lineTo(-8, -96); g.lineTo(8, -96); g.lineTo(30, -112); g.lineTo(26, -88); g.fill();
@@ -46,14 +46,14 @@ function owl(g, x, ground, s, fill, detail) {
   for (let i = 0; i < 4; i++) { g.beginPath(); g.arc(0, -52 + i * 9, 16 - i * 2, .3, Math.PI - .3); g.stroke(); }
   g.restore();
 }
-function olive(g, x, y, len, fill) {
+export function olive(g, x, y, len, fill) {
   g.save(); g.translate(x, y); g.strokeStyle = fill; g.fillStyle = fill; g.lineWidth = 2.5;
   g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(len * .4, -len * .3, len, -len * .1); g.stroke();
   for (let i = 1; i < 9; i++) { const t = i / 9, px = len * t, py = -len * .3 * 4 * t * (1 - t) * .55 - len * .1 * t; [-1, 1].forEach(k => { g.beginPath(); g.ellipse(px, py + k * 7, 10, 3.2, k * .5, 0, Math.PI * 2); g.fill(); }); }
   g.restore();
 }
 
-function meander(g, y, h, w, color) {
+export function meander(g, y, h, w, color) {
   g.strokeStyle = color; g.lineWidth = Math.max(2.5, h * .1); const u = h * .9;
   for (let x = 0; x < w; x += u * 1.2) { g.beginPath(); g.moveTo(x, y + h * .9); g.lineTo(x + u, y + h * .9); g.lineTo(x + u, y + h * .12); g.lineTo(x + u * .25, y + h * .12); g.lineTo(x + u * .25, y + h * .65); g.lineTo(x + u * .7, y + h * .65); g.lineTo(x + u * .7, y + h * .4); g.stroke(); }
 }
@@ -149,9 +149,11 @@ export function createPottery(THREE, scene, M, { compact, box, contactShadow }) 
     pieces.push({ group: g, x, z, r: .55 });
   }
   vase({ kind: 'hydria', style: 'black', x: -4.3, z: -3.2, rot: 1.0, seed: 2, scale: 1.3 });
-  vase({ kind: 'krater', style: 'red', x: -4.25, z: -14.6, rot: 1.1, seed: 3, scale: 1.35 });
+  vase({ kind: 'neckAmphora', style: 'black', x: 4.25, z: -2.3, rot: -1.1, seed: 1, scale: 1.3 });
+  // Las piezas de las salas II y III quedan fuera del barrido de las puertas (1,5 m tras cada portada).
+  vase({ kind: 'krater', style: 'red', x: -4.25, z: -15.9, rot: 1.1, seed: 3, scale: 1.35 });
   vase({ kind: 'bellyAmphora', style: 'red', x: 4.25, z: -19.4, rot: -1.0, seed: 4 });
-  vase({ kind: 'hydria', style: 'red', x: -4.25, z: -26.8, rot: 1.2, seed: 5, scale: 1.25 });
-  vase({ kind: 'krater', style: 'black', x: 4.25, z: -27.2, rot: -1.1, seed: 6, scale: 1.3 });
+  vase({ kind: 'hydria', style: 'red', x: -4.25, z: -27.9, rot: 1.2, seed: 5, scale: 1.25 });
+  vase({ kind: 'krater', style: 'black', x: 4.25, z: -28.3, rot: -1.1, seed: 6, scale: 1.3 });
   return { pieces };
 }

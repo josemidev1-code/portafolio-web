@@ -409,6 +409,8 @@ function applyQuality() {
   // En calidad baja las sombras se recalculan cada pocos fotogramas: la escena casi no se mueve.
   renderer.shadowMap.autoUpdate = P.shadowEvery === 1; renderer.shadowMap.needsUpdate = true;
   dust.visible = P.dust;
+  // Reflejo del suelo pulido: vuelve a pintar la escena, solo en calidad alta.
+  architecture.mirror.visible = P.reflect;
   canvas.dataset.quality = quality; canvas.dataset.qualityMode = qualityMode;
   qualityButton.textContent = `Gráficos · ${qualityMode === 'auto' ? 'Auto ' : ''}${QUALITY_NAMES[quality]}`;
   qualityButton.title = `${qualityMode === 'auto' ? 'Calidad elegida según tu equipo' : 'Calidad fijada a mano'}. Pulsa para cambiarla.`;
