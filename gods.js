@@ -1,11 +1,11 @@
-/** Dioses del museo: una escultura protagonista por sala (busto de Atenea, Hermes y Hefesto).
+/** Dioses del museo: una escultura protagonista por sala (estatua de Atenea, Hermes y Hefesto).
  *  Cada pieza tiene pedestal con inscripción griega, luz propia y una zona invisible para abrir su ficha. */
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/DRACOLoader.js';
 
 export const GODS = [
   // Busto monumental: el rostro lleva pintado el trazo del retrato de referencia, como la policromía de las estatuas griegas.
-  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -2.8, z: -7.9, rot: .48, height: 2.25, plinth: 1.15, kind: 'sculpt', src: 'assets/atenea-busto/atenea', paint: 'assets/atenea-busto/rostro.png', hero: true },
+  { id: 'atenea', greek: 'ΑΘΗΝΑ', motto: 'Sabiduría y estrategia', x: -2.8, z: -7.9, rot: .48, height: 2.3, plinth: 1.0, kind: 'sculpt', src: 'assets/atenea/atenea', hero: true },
   { id: 'hermes', greek: 'ΕΡΜΗΣ', motto: 'Mensajero de los dioses', x: -2.8, z: -19.9, rot: .48, height: 2.45, plinth: 1.0, kind: 'scan', src: 'assets/hermes/hermes', hero: true },
   { id: 'hefesto', greek: 'ΗΦΑΙΣΤΟΣ', motto: 'El herrero del Olimpo', x: -2.8, z: -31.9, rot: .48, height: 1.42, plinth: 1.0, kind: 'sculpt', src: 'assets/hefesto/hefesto', hero: true }
 ];

@@ -10,7 +10,7 @@ Un museo digital de inspiración griega, ambientado en la saga griega de God of 
 - **Arquitectura** (`greek-temple.js`): pórtico dórico hexástilo sobre crepidoma, columnas de veinte estrías con éntasis, anillos, equino y ábaco, entablamento con triglifos, gotas y mútulos, frontón con escudo y corona de olivo, acroteras, muros de sillería con zócalo de ortostatos, techo de casetones pintados con estrellas doradas, lucernarios con haces de luz, puertas de bronce y cielo crepuscular.
 - **Materiales** (`materials.js`): mármol veteado, sillería, losas y bronce con pátina, generados en canvas con ruido periódico (color, rugosidad y relieve) y proyectados en metros reales para que no se estiren.
 - **Dioses** (`gods.js`): una escultura por sala, con pedestal, inscripción griega, focos propios y una ficha interactiva (quiénes eran, su papel en God of War y por qué están aquí).
-  - Sala I: busto de Atenea modelado a partir del retrato de referencia (`assets/atenea-busto/`) y relieve de mármol tallado del mismo dibujo (`assets/atenea-relieve/`); scripts en `tools/esculturas/`.
+  - Sala I: estatua de Atenea de cuerpo entero, generada en 3D a partir de las vistas frontal, de perfil y trasera de la hoja de referencia (`assets/atenea/`) y relieve de mármol tallado del mismo dibujo (`assets/atenea-relieve/`); scripts en `tools/esculturas/`.
   - Sala II: Hermes, escaneado (`assets/hermes/`).
   - Sala III: Hefesto, modelado (`assets/hefesto/`).
 - **Ágora y Atenas** (`athens.js`): plaza con mosaico, cipreses, propileo y el muro grabado con mi presentación (interactivo). Alrededor, Atenas sobre colinas con casas, templos menores, cipreses y luces de ventanas al anochecer.
