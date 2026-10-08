@@ -19,6 +19,7 @@ Un museo digital de inspiración griega, ambientado en la saga griega de God of 
 - **Cámara libre en PC** (`free-camera.js`, `navigation.js`): WASD, mirada al arrastrar el ratón, Q/E para altura, Mayús para correr y Esc para regresar al recorrido. Incluye límites de fachada, puertas y urnas.
 - **Ambientación** (`mythology.js`): placas de bronce de Atenea, Hermes y Hefesto y estandartes carmesí.
 - **Renderizado** (`cinematic.js`): oclusión ambiental en pantalla y desenfoque de cámara calculados con la profundidad. Los textos y botones permanecen nítidos.
+- **Calidad gráfica** (`quality.js`): al cargar se lee la tarjeta gráfica, los núcleos y la memoria del equipo y se elige calidad alta, media o baja. Si después no se alcanzan unos 30 fps, baja un nivel (y luego la resolución) y lo recuerda para la próxima visita. El botón «Gráficos» permite fijarla a mano. La calidad baja pinta la escena sin posproceso, a menor resolución, con menos luces de relleno y con sombras que se recalculan cada pocos fotogramas, y carga la geometría y las esculturas ligeras.
 - **Movimiento** (`motion.js`): amortiguación del avance y curvas de aceleración, independientes de la tasa de fotogramas.
 
 Three.js 0.169.0 se carga desde jsDelivr y las tipografías desde Google Fonts. Se necesita conexión a Internet para estas dependencias. Las geometrías y texturas del edificio y de la ciudad se generan en la página. Solo se descargan las esculturas: unos 5,3 MB en ordenador y 3,2 MB en móvil, con modelos comprimidos con Draco.

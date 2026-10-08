@@ -11,6 +11,7 @@ import { createFires } from './fire.js';
 import { createPottery } from './pottery.js';
 import { createGods, GOD_INFO } from './gods.js';
 import { createAthens, WALL } from './athens.js';
+import { PRESETS, initialQuality, createGovernor, saveChoice } from './quality.js';
 
 const root = document.documentElement;
 let savedMotion=null;try{savedMotion=localStorage.getItem('museo-motion');}catch{}
@@ -25,6 +26,12 @@ motionButton.addEventListener('click',()=>{
 });
 const finePointer = matchMedia('(pointer: fine)').matches;
 let small = innerWidth < 720;
+// Calidad gráfica: se elige según la tarjeta del equipo antes de crear la escena.
+const detectedQuality = initialQuality({ mobile: small || !finePointer });
+let qualityMode = detectedQuality.mode, quality = detectedQuality.level, renderScale = 1;
+// En equipos modestos la geometría, las texturas y las esculturas se cargan en su versión ligera.
+const compact = small || quality === 'baja';
+const pixelRatio = () => { const P = PRESETS[quality]; return Math.min(devicePixelRatio, small ? Math.min(1.35, P.pixelCap) : P.pixelCap) * P.scale * renderScale; };
 
 /* ---------- Fichas (contenido real) ---------- */
 const FICHAS = [
@@ -132,9 +139,9 @@ function goTo(stopIndex) {
 const canvas = document.getElementById('scene');
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: !PRESETS[quality].post, powerPreference: 'high-performance' });
 } catch (e) { root.classList.add('no-webgl', 'ready'); throw e; }
-renderer.setPixelRatio(Math.min(devicePixelRatio, small ? 1.35 : 1.75));
+renderer.setPixelRatio(pixelRatio());
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -169,14 +176,14 @@ function canvasTex(w, h, draw, opts = {}) {
   t.userData = { canvas: c, ctx: g };
   return t;
 }
-const M = createMaterials(THREE, { compact: small });
-const architecture = createGreekMuseum(THREE, scene, canvasTex, small, M);
-const mythology = addMythology(THREE, scene, canvasTex, small, M);
-const athens = createAthens(THREE, scene, M, { compact: small, canvasTex, contactShadow: architecture.contactShadow });
-const fires = createFires(THREE, scene, M, { compact: small, canvasTex });
-createPottery(THREE, scene, M, { compact: small, contactShadow: architecture.contactShadow });
-const gods = createGods(THREE, scene, M, { compact: small, renderer, contactShadow: architecture.contactShadow });
-const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact:small,reduce});
+const M = createMaterials(THREE, { compact });
+const architecture = createGreekMuseum(THREE, scene, canvasTex, compact, M);
+const mythology = addMythology(THREE, scene, canvasTex, compact, M);
+const athens = createAthens(THREE, scene, M, { compact, canvasTex, contactShadow: architecture.contactShadow });
+const fires = createFires(THREE, scene, M, { compact, canvasTex });
+createPottery(THREE, scene, M, { compact, contactShadow: architecture.contactShadow });
+const gods = createGods(THREE, scene, M, { compact, renderer, contactShadow: architecture.contactShadow });
+const cinematic = createMotionRenderer(THREE,renderer,scene,camera,{compact,reduce});
 
 /* Textos de pared: rótulos de sala pintados sobre el muro */
 // Letras grabadas en la piedra: surco oscuro con una arista de luz debajo.
@@ -235,7 +242,7 @@ function makeUrn({ z, accent, inner, plaque }) {
   // pieza interior
   inner.position.y = 1.62; g.add(inner);
   // luz interior de color
-  const glow = new THREE.PointLight(accent, small ? 0 : 2.2, 2.6, 2); glow.position.set(0, 1.5, .1); glow.visible = !small; g.add(glow);
+  const glow = new THREE.PointLight(accent, small ? 0 : 2.2, 2.6, 2); glow.position.set(0, 1.5, .1); glow.visible = !small; glow.userData.extra = !small; g.add(glow);
   // cartela de latón en la peana
   const plq = new THREE.Mesh(new THREE.PlaneGeometry(.7, .2), new THREE.MeshStandardMaterial({ map: plaque, metalness: .7, roughness: .38 }));
   plq.position.set(0, .66, .552); g.add(plq);
@@ -388,6 +395,42 @@ const dotTex = canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 3
 const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#ffe6c2', map: dotTex, size: .028, transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending }));
 scene.add(dust);
 
+/* ---------- Calidad gráfica ---------- */
+const QUALITY_NAMES = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+const qualityButton = document.getElementById('quality-toggle');
+function applyQuality() {
+  const P = PRESETS[quality];
+  renderer.setPixelRatio(pixelRatio()); renderer.setSize(innerWidth, innerHeight);
+  cinematic.configure(P); cinematic.resize();
+  const sun = architecture.sun;
+  if (sun.shadow.mapSize.x !== P.sunMap) { sun.shadow.mapSize.set(P.sunMap, P.sunMap); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+  // Luces de relleno y sombras secundarias: three.js recompila los materiales al cambiar su número.
+  scene.traverse(o => { if (!o.isLight) return; if (o.userData.extra) o.visible = P.extraLights; if (o.userData.heroShadow) o.castShadow = P.heroShadow; });
+  // En calidad baja las sombras se recalculan cada pocos fotogramas: la escena casi no se mueve.
+  renderer.shadowMap.autoUpdate = P.shadowEvery === 1; renderer.shadowMap.needsUpdate = true;
+  dust.visible = P.dust;
+  canvas.dataset.quality = quality; canvas.dataset.qualityMode = qualityMode;
+  qualityButton.textContent = `Gráficos · ${qualityMode === 'auto' ? 'Auto ' : ''}${QUALITY_NAMES[quality]}`;
+  qualityButton.title = `${qualityMode === 'auto' ? 'Calidad elegida según tu equipo' : 'Calidad fijada a mano'}. Pulsa para cambiarla.`;
+}
+const governor = createGovernor({
+  getLevel: () => quality,
+  setLevel: level => { quality = level; applyQuality(); },
+  setScale: s => { renderScale = s; applyQuality(); },
+  isAuto: () => qualityMode === 'auto',
+  isBusy: () => dlg.open || freeCamera.active
+});
+// Auto → Alta → Media → Baja → Auto
+qualityButton.addEventListener('click', () => {
+  const order = ['auto', 'alta', 'media', 'baja'];
+  const next = order[(order.indexOf(qualityMode === 'auto' ? 'auto' : quality) + 1) % order.length];
+  qualityMode = next === 'auto' ? 'auto' : 'manual';
+  quality = next === 'auto' ? detectedQuality.detected : next;
+  renderScale = 1; saveChoice(next); applyQuality();
+  if (qualityMode === 'auto') governor.start(performance.now());
+});
+applyQuality();
+
 /* ---------- Interfaz ---------- */
 const cards = { 2: document.getElementById('card-1'), 4: document.getElementById('card-2'), 6: document.getElementById('card-3') };
 const roomTitle = document.getElementById('room-title'), roomKicker = document.getElementById('room-kicker'), roomText = document.getElementById('room-text');
@@ -505,10 +548,10 @@ function updateUI(s) {
 }
 
 const clock = new THREE.Clock();
-let screenAcc = 0, running = true, fpsFrames = 0, fpsStart = 0;
+let screenAcc = 0, running = true, fpsFrames = 0, fpsStart = 0, frameNo = 0;
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); running = false; window.museumFallback(); });
 canvas.addEventListener('webglcontextrestored', () => location.reload());
-document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { clock.getDelta(); cinematic.reset(); loop(); } });
+document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { clock.getDelta(); cinematic.reset(); governor.reset(performance.now()); loop(); } });
 function loop() {
   if (!running) return;
   requestAnimationFrame(loop);
@@ -542,7 +585,8 @@ function loop() {
     u.glow.intensity += ((isHover ? 4 : 2.2) - u.glow.intensity) * .1;
   });
   screenAcc += dt; if (screenAcc > 1 / 24) { drawScreen(t); screenAcc = 0; }
-  if (!reduce) { const p = dustGeo.attributes.position; for (let i = 0; i < DUST; i++) { let y = p.array[i * 3 + 1] + dt * .04 * ((i % 7) - 3) * .3; if (y > 6.5) y = 0; if (y < 0) y = 6.5; p.array[i * 3 + 1] = y; } p.needsUpdate = true; }
+  if (frameNo % PRESETS[quality].shadowEvery === 0) renderer.shadowMap.needsUpdate = true;
+  if (!reduce && dust.visible) { const p = dustGeo.attributes.position; for (let i = 0; i < DUST; i++) { let y = p.array[i * 3 + 1] + dt * .04 * ((i % 7) - 3) * .3; if (y > 6.5) y = 0; if (y < 0) y = 6.5; p.array[i * 3 + 1] = y; } p.needsUpdate = true; }
 
   // hover sobre urnas
   if (finePointer && !dlg.open) {
@@ -565,6 +609,7 @@ function loop() {
   }else updateUI(s);
   mythology.update(t,reduce);
   cinematic.render(dt);
+  governor.tick(performance.now()); frameNo++;
   fpsFrames++;
   if(t-fpsStart>=1){canvas.dataset.frameRate=String(Math.round(fpsFrames/(t-fpsStart)));fpsFrames=0;fpsStart=t;}
 }
@@ -578,7 +623,7 @@ addEventListener('resize', () => {
   camera.fov = small ? 62 : 50;
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 720 ? 1.35 : 1.75));
+  renderer.setPixelRatio(pixelRatio());
   cinematic.resize();
   readScroll();
 });
@@ -603,6 +648,6 @@ Promise.race([fontsReady, new Promise(r => setTimeout(r, 2500))]).then(() => {
 }).then(() => {
   renderer.compile(scene, camera);
   const wait = Math.max(0, (reduce ? 400 : 1250) - (performance.now() - start));
-  setTimeout(() => { shown = 100; count.textContent = '100'; clearTimeout(window.museumLoadTimer); root.classList.remove('no-webgl'); root.classList.add('ready'); }, wait);
+  setTimeout(() => { shown = 100; count.textContent = '100'; clearTimeout(window.museumLoadTimer); root.classList.remove('no-webgl'); root.classList.add('ready'); governor.start(performance.now()); }, wait);
 });
 loop();

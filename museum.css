@@ -222,8 +222,9 @@ body { touch-action: pan-y; }
 .room-title { transition: opacity 1s cubic-bezier(.22,1,.36,1); -webkit-text-stroke-color: rgba(236,230,220,.24); }
 .grain { opacity: .025; }
 
-.motion-toggle {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:66px;font-size:9px;letter-spacing:.08em;}
-.no-webgl .motion-toggle {display:none;}
+.view-tools {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:66px;display:flex;gap:6px;}
+.view-tools .pill {font-size:9px;letter-spacing:.08em;}
+.no-webgl .view-tools {display:none;}
 
 .free-toggle {position:fixed;z-index:12;right:clamp(16px,3vw,40px);top:108px;font-size:10px;}
 .free-hud {position:fixed;z-index:11;bottom:35px;left:50%;transform:translateX(-50%);width:max-content;max-width:90vw;padding:14px 20px;border:1px solid var(--line);border-radius:8px;background:rgba(9,12,15,.9);color:var(--plaster);font:11px/1.6 var(--label);text-align:center;}

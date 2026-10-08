@@ -63,12 +63,12 @@ export function createGods(THREE, scene, M, { compact, renderer, contactShadow }
     // Luz lateral alta desde el recorrido: modela el rostro y deja sombra en el muro.
     const side = g.x < 0 ? 1 : -1;
     key.position.set(g.x + side * 3.9, 7.4, g.z + 2.2); key.target.position.set(g.x, g.plinth + 1.5, g.z);
-    key.castShadow = !compact && g.hero; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -.0002; key.shadow.normalBias = .02; key.shadow.radius = 2;
+    key.castShadow = !compact && g.hero; key.userData.heroShadow = g.hero; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -.0002; key.shadow.normalBias = .02; key.shadow.radius = 2;
     key.shadow.camera.near = 2; key.shadow.camera.far = 14;
     scene.add(key, key.target);
     if (!compact && g.hero) {
       const rim = new THREE.SpotLight('#9fb6d0', 34, 10, Math.PI / 7, .7, 1.6);
-      rim.position.set(g.x - side * 2.2, 6.2, g.z - 2.8); rim.target.position.set(g.x, g.plinth + 1.6, g.z); scene.add(rim, rim.target);
+      rim.userData.extra = true; rim.position.set(g.x - side * 2.2, 6.2, g.z - 2.8); rim.target.position.set(g.x, g.plinth + 1.6, g.z); scene.add(rim, rim.target);
     }
     return key;
   }

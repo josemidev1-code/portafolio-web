@@ -341,7 +341,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   sun.shadow.normalBias = .03; sun.shadow.bias = -.0004; sun.shadow.radius = 3;
   // Luz de cielo fría para que la sombra nunca sea negra; tono de piedra en el rebote.
   scene.add(new THREE.HemisphereLight('#a9bccd', '#5a4636', .32));
-  const bounce = new THREE.DirectionalLight('#b88a62', .22); bounce.position.set(4, -2, -20); scene.add(bounce);
+  const bounce = new THREE.DirectionalLight('#b88a62', .22); bounce.position.set(4, -2, -20); bounce.userData.extra = true; scene.add(bounce);
 
   /* ---------- Agrupación de la arquitectura estática por material ---------- */
   statics.updateMatrixWorld(true);
