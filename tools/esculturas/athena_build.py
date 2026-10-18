@@ -5,13 +5,15 @@ from mathutils import Vector, Matrix
 from mathutils.bvhtree import BVHTree
 
 STAGE = os.environ.get('STAGE', 'all')
-OUT = os.environ.get('OUT', 'out/athena')
+OUT = os.path.abspath(os.environ.get('OUT', 'out/athena'))
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
 S = .1  # unidades de MakeHuman (dm) a metros
 
 v, vt, faces, ftex, groups = mh.load_base()
 v = mh.apply(v, {**A.BODY, **A.FACE}); B = mh.joint_positions(v); W = mh.weights()
 v2, B2, M = mh.pose(v, B, W, A.pose(mh, B))
 ev, ef = mh.proxy(f'{mh.DATA}/eyes/high-poly/high-poly.mhclo', v)
+eye_rest = ev.copy()
 # Los ojos siguen al hueso de la cabeza.
 Mh = M['head']; ev = (np.c_[ev, np.ones(len(ev))] @ Mh.T)[:, :3]
 cv = lambda a: np.c_[a[..., 0], -a[..., 2], a[..., 1]] * S
@@ -108,7 +110,7 @@ def build_hair():
     rng = np.random.default_rng(7)
     hw = np.array(W['head']); head_idx = hw[hw[:, 1] > .5, 0].astype(int)
     H = hair.Head(v, body_f, head_idx)
-    paths = hair.lock_paths(H, rng, shoulder_y=B['upperarm01.L']['head'][1] - .2, n=44)
+    paths = hair.lock_paths(H, rng, shoulder_y=B['upperarm01.L']['head'][1] - .2, n=64)
     cu = bpy.data.curves.new('hair', 'CURVE'); cu.dimensions = '3D'; cu.bevel_depth = 1; cu.bevel_resolution = 3; cu.resolution_u = 3
     for P, rad in paths:
         Q = to_world(P); sp = cu.splines.new('NURBS'); sp.points.add(len(Q) - 1); sp.use_endpoint_u = True; sp.order_u = 4
@@ -117,17 +119,20 @@ def build_hair():
     ob = bpy.data.objects.new('hair', cu); bpy.context.collection.objects.link(ob)
     bpy.context.view_layer.objects.active = ob; ob.select_set(True)
     bpy.ops.object.convert(target='MESH'); ob = bpy.context.object
-    rm = ob.modifiers.new('rm', 'REMESH'); rm.mode = 'VOXEL'; rm.voxel_size = .0035
-    sm = ob.modifiers.new('sm', 'SMOOTH'); sm.factor = .5; sm.iterations = 2
-    bpy.ops.object.modifier_apply(modifier='rm'); bpy.ops.object.modifier_apply(modifier='sm')
+    # Un voxel fino une las raíces pero conserva las ondas talladas.
+    rm=ob.modifiers.new('Hair union','REMESH'); rm.mode='VOXEL'; rm.voxel_size=.0012
+    bpy.ops.object.modifier_apply(modifier=rm.name)
+    sm=ob.modifiers.new('Hair polish','SMOOTH'); sm.factor=.2; sm.iterations=1
+    bpy.ops.object.modifier_apply(modifier=sm.name)
     for p in ob.data.polygons: p.use_smooth = True
     ob.data.materials.append(mat)
     # Corona: hojas que se abren hacia arriba alrededor de la cabeza.
-    ring = hair.wreath_ring(H, rng, 24)
-    LV, LF = hair.leaf_mesh(.88, .27)
+    ring = hair.wreath_ring(H, rng, 40)
+    LV, LF = hair.leaf_mesh(.46, .115)
     allV, allF = [], []
-    for row in range(2):
+    for row in range(1):
         for i, (p, d, phi) in enumerate(ring):
+            if abs(math.sin(phi)) < .63: continue
             up = np.array([0, 1., 0]); tang = np.array([math.cos(phi), 0, -math.sin(phi)])
             # Las hojas apuntan hacia la frente desde ambos lados, como una corona de laurel, y se abren hacia arriba.
             toward_front = -1 if math.sin(phi) > 0 else 1
@@ -147,15 +152,27 @@ def build_hair():
     lo.data.materials.append(mat)
     # Banda de la corona.
     band = np.array([p for p, d, phi in ring] + [ring[0][0]])
-    cb = bpy.data.curves.new('band', 'CURVE'); cb.dimensions = '3D'; cb.bevel_depth = .0045; cb.bevel_resolution = 2
+    cb = bpy.data.curves.new('band', 'CURVE'); cb.dimensions = '3D'; cb.bevel_depth = .0014; cb.bevel_resolution = 2
     sp = cb.splines.new('NURBS'); Qb = to_world(band); sp.points.add(len(Qb) - 1); sp.use_cyclic_u = True; sp.order_u = 4
     for i, q in enumerate(Qb): sp.points[i].co = (*q, 1)
-    bo = bpy.data.objects.new('band', cb); bpy.context.collection.objects.link(bo); bo.data.materials.append(mat)
+    # El laurel nace entre el pelo; una cinta horizontal tapaba la frente.
     return ob
 
 
 if STAGE in ('hair', 'all'):
     build_hair()
+    # Iris labrados en el mismo mármol: la mirada se lee también sin pintura.
+    for side in (-1, 1):
+        P = eye_rest[eye_rest[:,0]*side > 0]
+        c = P.mean(0); c[2] = P[:,2].max() + .002
+        for r, thick in ((.047,.00055),(.016,.0007)):
+            angles=np.linspace(0,2*math.pi,49)
+            ring=np.array([c+np.array([r*math.cos(a),r*math.sin(a),0]) for a in angles])
+            Q=to_world(ring)
+            cu=bpy.data.curves.new('iris','CURVE'); cu.dimensions='3D'; cu.bevel_depth=thick; cu.bevel_resolution=2
+            sp=cu.splines.new('POLY'); sp.points.add(len(Q)-1)
+            for p,q in zip(sp.points,Q): p.co=(*q,1)
+            ob=bpy.data.objects.new('iris',cu); bpy.context.collection.objects.link(ob); ob.data.materials.append(mat)
 
 
 def dominant_bone():
@@ -172,7 +189,9 @@ def build_yoke(top_z):
     dom = dominant_bone()
     keep_bones = {'spine01', 'spine02', 'spine03', 'clavicle.L', 'clavicle.R', 'shoulder01.L', 'shoulder01.R', 'upperarm01.L', 'upperarm01.R', 'upperarm02.L', 'upperarm02.R', 'breast.L', 'breast.R'}
     neck_z = J['neck01'].z + .005
-    sel = np.array([(dom[i] in keep_bones) and V[i, 2] > top_z - .035 and V[i, 2] < neck_z for i in range(len(V))])
+    sel = np.array([(dom[i] in keep_bones) and V[i, 2] > top_z - .035
+                    and V[i, 2] < neck_z - .14 * math.exp(-(V[i,0]/.13)**2)
+                    for i in range(len(V))])
     fs = [f for f in body_f if all(sel[k] for k in f)]
     used = sorted({k for f in fs for k in f}); remap = {k: i for i, k in enumerate(used)}
     me = bpy.data.meshes.new('yoke'); me.from_pydata([tuple(V[k]) for k in used], [], [[remap[k] for k in f] for f in fs]); me.update()
@@ -241,6 +260,8 @@ if STAGE == 'all':
     gold = bpy.data.materials.new('gold'); gold.use_nodes = True
     gb = gold.node_tree.nodes['Principled BSDF']; gb.inputs['Base Color'].default_value = (.72, .52, .26, 1); gb.inputs['Metallic'].default_value = 1; gb.inputs['Roughness'].default_value = .32
     yoke = build_yoke(top_z)
+    bl.subdivide(yoke, 2)
+    bl.subdivide(cl, 1)
     bpy.context.view_layer.update()
     # Broches: el principal en el hombro izquierdo (a la derecha del espectador), como en el retrato.
     for side, r in (('L', .026), ('R', .018)):

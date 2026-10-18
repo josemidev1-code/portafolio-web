@@ -24,3 +24,17 @@ test('La aceleración gradual y la suelta de teclas conservan velocidades peque�
   assert.ok(Math.abs((20-slow.z)/(20-full.z)-.1)<1e-8);
   assert.deepEqual(moveVisitor(p,{forward:0,strafe:0,lift:0},0,.1),p);
 });
+
+test('Los umbrales interiores dejan pasar por ambos lados del eje',()=>{
+  for(const z of [-11,-23])for(const x of [-3.5,0,3.5]){
+    const p=moveVisitor({x,y:1.75,z:z+.1},forward,0,.1);
+    assert.ok(p.z<z,`paso bloqueado en ${x}, ${z}`);
+  }
+});
+
+test('Las esculturas de las exedras conservan su espacio de protección',()=>{
+  for(const z of [-6.5,-18.5,-30.5]){
+    const p=moveVisitor({x:-3.65,y:1.75,z:z+1.2},forward,0,.1);
+    assert.ok(Math.hypot(p.x+3.65,p.z-z)>=1.15-1e-8);
+  }
+});

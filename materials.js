@@ -74,7 +74,7 @@ export function createMaterials(THREE, { compact = false } = {}) {
     for (let i = 0; i < S * S; i++) {
       const c = cloud[i], v = clamp01(vein[i]), g = grain[i];
       const shade = .9 + (c - .5) * .14 + (g - .5) * .015;
-      for (let k = 0; k < 3; k++) ci.data[i * 4 + k] = 255 * clamp01(tint[k] * shade * (1 - v * .55) + veinColor[k] * v * .55);
+      for (let k = 0; k < 3; k++) ci.data[i * 4 + k] = 255 * clamp01(tint[k] * shade * (1 - v * .22) + veinColor[k] * v * .22);
       ci.data[i * 4 + 3] = 255;
       // Las vetas y las zonas gastadas son algo más ásperas que el pulido.
       const r = clamp01(.3 + v * .14 + (g - .5) * .1 + (c - .5) * .12);

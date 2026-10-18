@@ -8,17 +8,17 @@ BODY = {
     'neck/neck-scale-horiz-decr': .25, 'neck/neck-scale-vert-incr': .3,
 }
 FACE = {
-    'head/head-oval': .45, 'head/head-round': .15,
-    'chin/chin-prominent-incr': .35, 'chin/chin-width-decr': .1, 'chin/chin-height-incr': .15,
-    'nose/nose-greek-incr': .8, 'nose/nose-hump-decr': .6, 'nose/nose-point-width-decr': .4, 'nose/nose-width1-decr': .3,
+    'head/head-oval': .3, 'head/head-round': .28,
+    'chin/chin-prominent-incr': .12, 'chin/chin-width-decr': .1, 'chin/chin-height-incr': .05,
+    'nose/nose-greek-incr': .55, 'nose/nose-hump-decr': .6, 'nose/nose-point-width-decr': .4, 'nose/nose-width1-decr': .3,
     'nose/nose-scale-horiz-decr': .25, 'nose/nose-volume-decr': .2, 'nose/nose-trans-forward': .2,
     'mouth/mouth-upperlip-volume-incr': .8, 'mouth/mouth-lowerlip-volume-incr': .9, 'mouth/mouth-cupidsbow-incr': .7,
     'mouth/mouth-scale-horiz-decr': .1, 'mouth/mouth-lowerlip-height-incr': .3, 'mouth/mouth-upperlip-height-incr': .2,
     'cheek/l-cheek-bones-incr': .4, 'cheek/r-cheek-bones-incr': .4, 'cheek/l-cheek-volume-incr': .15, 'cheek/r-cheek-volume-incr': .15,
-    'eyes/l-eye-scale-incr': 1.0, 'eyes/r-eye-scale-incr': 1.0, 'eyes/l-eye-height1-incr': .4, 'eyes/r-eye-height1-incr': .4, 'eyes/l-eye-corner2-up': .3, 'eyes/r-eye-corner2-up': .3,
+    'eyes/l-eye-scale-incr': 1.15, 'eyes/r-eye-scale-incr': 1.15, 'eyes/l-eye-height1-incr': .4, 'eyes/r-eye-height1-incr': .4, 'eyes/l-eye-corner2-up': .3, 'eyes/r-eye-corner2-up': .3,
     'eyes/l-eye-height2-incr': .25, 'eyes/r-eye-height2-incr': .25,
-    'eyebrows/eyebrows-trans-forward': .7, 'eyebrows/eyebrows-angle-up': .25, 'forehead/forehead-nubian-incr': .1,
-    'head/head-scale-vert-decr': .35, 'head/head-age-decr': .5, 'mouth/mouth-angles-up': .15, 'eyes/l-eye-push1-out': .2, 'eyes/r-eye-push1-out': .2,
+    'eyebrows/eyebrows-trans-forward': .35, 'eyebrows/eyebrows-angle-up': .25, 'forehead/forehead-nubian-incr': .1,
+    'head/head-scale-vert-decr': .55, 'head/head-age-decr': .5, 'mouth/mouth-angles-up': .15, 'eyes/l-eye-push1-out': .2, 'eyes/r-eye-push1-out': .2,
 }
 
 

@@ -30,19 +30,19 @@ def lock_paths(H, rng, shoulder_y, n=34, alpha0=-50, alpha1=112):
     paths = []
     X, Y, Z = np.eye(3)
     for side in (-1, 1):
-        for layer in range(3):
+        for layer in range(2):
             for k in range(n):
                 u = (k + rng.uniform(.15, .85)) / n
                 alpha = math.radians(alpha0 + u * (alpha1 - alpha0))
                 d = np.array([side * .02, math.cos(alpha), -math.sin(alpha)]); d /= np.linalg.norm(d)
-                thick = .05 + .075 * layer + .04 * (1 - u)
-                phase = rng.uniform(0, 6.28); amp = .045 + .025 * layer; lam = rng.uniform(.8, 1.1)
+                thick = .055 + .06 * layer + .04 * (1 - u)
+                phase = rng.uniform(0, 6.28); amp = .06 + .02 * layer; lam = rng.uniform(.7, .95)
                 pts = []; travelled = 0; last_d = d
                 for i in range(60):
                     r = H.surface(d)
                     if r is None: break
                     side_w = max(0., 1 - abs(d[0]) * 1.15)
-                    F = X * side * (.9 * side_w + .05) - Y * (.45 + .9 * abs(d[0])) - Z * (.25 + .25 * u)
+                    F = X * side * (.9 * side_w + .05) - Y * (.32 + .7 * abs(d[0])) - Z * (.6 + .25 * u)
                     Ft = F - np.dot(F, d) * d; Ft /= np.linalg.norm(Ft) + 1e-9
                     # Ondas: oscilación perpendicular al flujo sobre el cráneo.
                     perp = np.cross(d, Ft)
@@ -61,7 +61,7 @@ def lock_paths(H, rng, shoulder_y, n=34, alpha0=-50, alpha1=112):
                         t = i / nfall
                         w = (amp + .08) * math.sin((travelled + length * t) / lam * 6.28 * 1.2 + phase)
                         pts.append(np.array([last[0] + side * (.12 * t + .45 * w), last[1] - length * t, last[2] + dirz * t + .5 * w]))
-                rad = .066 + .022 * layer + rng.uniform(-.012, .016)
+                rad = .045 + .01 * layer + rng.uniform(-.006, .008)
                 paths.append((np.array(pts), rad))
     # Mechones de la nuca: caen por detrás para cubrir el centro.
     for k in range(12):

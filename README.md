@@ -1,5 +1,7 @@
 # Portafolio de José Miguel Miralles Gandia
 
+Revisión local de Atenea y de la distribución del museo: [notas, límites y reproducción](docs/atenea-museo-local.md).
+
 Un museo digital de inspiración griega, ambientado en la saga griega de God of War, para explorar proyectos web y aplicaciones. El recorrido empieza en el ágora de Atenas, ante un muro con mi presentación grabada en piedra. Después cruza el Partenón y sus tres salas, cada una presidida por un dios. Se avanza con la rueda del ratón o deslizando hacia arriba en el móvil.
 
 ## Qué hace cada tecnología

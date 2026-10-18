@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atenea · Estudio de escultura</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#171a1b;color:#eee6d9;font:15px system-ui}header{position:absolute;top:0;left:0;padding:24px;z-index:2}h1{font:36px Georgia;margin:6px 0}small{letter-spacing:.14em;color:#c6ac7d}main{display:grid;grid-template-columns:1fr 32%;height:100dvh}#view{min-width:0;position:relative}canvas{display:block;width:100%;height:100%}aside{background:#202324;padding:24px;display:flex;flex-direction:column;gap:16px}aside img{width:100%;min-height:0;flex:1;object-fit:contain}p{line-height:1.6;margin:0;color:#bab9b4}nav{position:absolute;bottom:24px;left:24px;display:flex;gap:8px;flex-wrap:wrap;z-index:2}button,a{background:#2c3031;color:#eee6d9;border:1px solid #68604f;padding:11px 16px;cursor:pointer;text-decoration:none;font:inherit}button:hover,button:focus-visible,a:hover{background:#4a4132}#status{position:absolute;top:145px;left:24px;color:#c6ac7d;pointer-events:none}@media(max-width:720px){main{grid-template-columns:1fr}aside{display:none}header{padding:18px}h1{font-size:28px}}
+</style><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"}}</script></head>
+<body><main><section id="view" aria-label="Vista 3D de Atenea"><header><small>ESTUDIO DE ESCULTURA · VERSIÓN DE TRABAJO</small><h1>Atenea</h1><p>Arrastra para girar · Rueda para acercarte</p></header><div id="status" role="status">Cargando escultura…</div><nav><button id="face">Rostro</button><button id="full">Cuerpo entero</button><button id="side">Perfil</button><button id="spin" aria-pressed="false">Girar</button><a href="./">Museo ↗</a></nav></section><aside><small>REFERENCIA DEL ROSTRO</small><img src="outputs/referencia.png" alt="Dibujo de referencia de Atenea aportado por el autor"><p>La escultura es una interpretación tridimensional en desarrollo. El parecido facial todavía necesita ajuste; la vista posterior y el perfil son interpretados.</p></aside></main>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/controls/OrbitControls.js';
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/DRACOLoader.js';
+const host=document.querySelector('#view'),status=document.querySelector('#status');
+const scene=new THREE.Scene();scene.background=new THREE.Color('#24282a');
+const camera=new THREE.PerspectiveCamera(35,1,.01,30);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;host.append(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=.15;controls.maxDistance=6;controls.maxPolarAngle=Math.PI*.9;
+scene.add(new THREE.HemisphereLight('#d5e3ee','#29221b',.8));
+for(const [x,y,z,power,color] of [[1,2,2,12,'#ffe6c8'],[-2,1,1,5,'#c5d9ee'],[0,2,-2,16,'#fff2dc']]){const l=new THREE.DirectionalLight(color,power*.16);l.position.set(x,y,z);scene.add(l)}
+const draco=new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/libs/draco/gltf/');
+const loader=new GLTFLoader().setDRACOLoader(draco);
+function frame(mode){controls.target.set(0,mode==='full'?.59:.91,0);camera.position.set(mode==='side'?.7:0,mode==='full'?.72:.94,mode==='side'?0:mode==='full'?2.65:.65);controls.update()}
+frame('face');
+loader.load('assets/atenea/atenea.glb',g=>{g.scene.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=.64}});scene.add(g.scene);status.textContent='';draco.dispose()},undefined,()=>{status.textContent='No se ha podido cargar el modelo. Comprueba el servidor local y la conexión.'});
+document.querySelector('#face').onclick=()=>frame('face');document.querySelector('#full').onclick=()=>frame('full');document.querySelector('#side').onclick=()=>frame('side');document.querySelector('#spin').onclick=e=>{controls.autoRotate=!controls.autoRotate;e.target.setAttribute('aria-pressed',String(controls.autoRotate));e.target.textContent=controls.autoRotate?'Detener':'Girar'};
+new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()}).observe(host);
+const clock=new THREE.Clock();renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(document.hidden)return;controls.update(dt);renderer.render(scene,camera)});
+</script></body></html>

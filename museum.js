@@ -499,6 +499,9 @@ addEventListener('keydown', e => {
 const cursor = document.getElementById('cursor'), cursorLabel = cursor.querySelector('span');
 const mouse = new THREE.Vector2(0, 0), mouseTarget = new THREE.Vector2(0, 0), ndc = new THREE.Vector2(9, 9);
 const ray = new THREE.Raycaster(); let hovered = null;
+const hoverTargets = [...urns.map(u => u.hit), ...gods.hits.map(g => g.mesh), athens.wallHit];
+const hoverOwners = new Map([...urns.map(u => [u.hit, u]), ...gods.hits.map(g => [g.mesh, g]), [athens.wallHit, ABOUT_HIT]]);
+let hoverElapsed = 0;
 let cx = innerWidth / 2, cy = innerHeight / 2, tx = cx, ty = cy;
 if (finePointer) document.body.classList.add('has-cursor');
 addEventListener('pointermove', e => {
@@ -591,15 +594,16 @@ function loop() {
   if (!reduce && dust.visible) { const p = dustGeo.attributes.position; for (let i = 0; i < DUST; i++) { let y = p.array[i * 3 + 1] + dt * .04 * ((i % 7) - 3) * .3; if (y > 6.5) y = 0; if (y < 0) y = 6.5; p.array[i * 3 + 1] = y; } p.needsUpdate = true; }
 
   // hover sobre urnas
-  if (finePointer && !dlg.open) {
+  hoverElapsed += dt;
+  if (finePointer && !dlg.open && hoverElapsed >= 1 / 30) {
+    hoverElapsed = 0;
     ray.setFromCamera(ndc, camera);
-    const targets = [...urns.map(u => u.hit), ...gods.hits.map(g => g.mesh), athens.wallHit];
-    const hit = ray.intersectObjects(targets, false)[0];
-    const u = hit && hit.distance < 12 ? (urns.find(x => x.hit === hit.object) || gods.hits.find(g => g.mesh === hit.object) || (hit.object === athens.wallHit ? ABOUT_HIT : null)) : null;
+    const hit = ray.intersectObjects(hoverTargets, false)[0];
+    const u = hit && hit.distance < 12 ? hoverOwners.get(hit.object) : null;
     hovered = u && (u.god || u.about || u.ficha >= 0) ? u : null;
     if (hovered) cursorLabel.textContent = hovered.about ? 'Sobre mí' : hovered.god ? `Conocer a ${GOD_INFO[hovered.god].title}` : 'Ver ficha';
     cursor.classList.toggle('view', !!hovered);
-  } else hovered = null;
+  } else if (!finePointer || dlg.open) { hovered = null; cursor.classList.remove('view'); }
   cx += (tx - cx) * (1 - Math.pow(.0001, dt)); cy += (ty - cy) * (1 - Math.pow(.0001, dt));
   cursor.style.transform = `translate3d(${cx}px,${cy}px,0)`;
 

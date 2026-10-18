@@ -278,10 +278,20 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   const sunDir = new THREE.Vector3(...SUN_OFFSET).normalize();
   // Un lucernario por sala, centrado en la retícula; el haz cae por detrás de cada urna.
   const skylights = [-4, -16, -28].map(z => ({ x: -2, z }));
-  const isOpen = (cx, cz) => skylights.some(s => Math.abs(cx - s.x) <= 1.01 && Math.abs(cz - s.z) <= 1.01);
+  const courtyard = (x, z) => Math.abs(x) < 4 && z < -12.05 && z > -22.05;
+  const isOpen = (cx, cz) => courtyard(cx, cz) || skylights.some(s => Math.abs(cx - s.x) <= 1.01 && Math.abs(cz - s.z) <= 1.01);
   const CY = HALL.top;
-  for (let x = -6; x <= 6; x += 2) box(.3, .5, HALL.start - HALL.end, x, CY + .25, wallZ, M.marble);
-  for (let z = HALL.start - .05; z >= HALL.end; z -= 2) box(12, .5, .3, 0, CY + .25, z, M.marble);
+  for (let x = -6; x <= 6; x += 2) {
+    const spans = Math.abs(x) < 4 ? [[HALL.start, -12.05], [-22.05, HALL.end]] : [[HALL.start, HALL.end]];
+    spans.forEach(([a,b]) => box(.3, .5, a-b, x, CY+.25, (a+b)/2, M.marble));
+  }
+  for (let z = HALL.start - .05; z >= HALL.end; z -= 2) {
+    if (courtyard(0,z)) [-1,1].forEach(s => box(2,.5,.3,s*5,CY+.25,z,M.marble));
+    else box(12,.5,.3,0,CY+.25,z,M.marble);
+  }
+  // Patio hipetro de Hermes: cielo real, pórticos cubiertos a ambos lados.
+  [-1,1].forEach(s => box(.38,.28,10,s*4,CY+.55,-17.05,M.marbleWarm));
+  [-12.05,-22.05].forEach(z => box(8.4,.28,.38,0,CY+.55,z,M.marbleWarm));
   const starShape = new THREE.Shape();
   for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? .07 : .2; const fn = i ? 'lineTo' : 'moveTo'; starShape[fn](Math.cos(a) * r, Math.sin(a) * r); }
   const starGeo = new THREE.ShapeGeometry(starShape); starGeo.rotateX(Math.PI / 2);
@@ -307,6 +317,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
         float a=edge*fall*facing*motes*uStrength; gl_FragColor=vec4(uColor*a,a); }`
   });
   skylights.forEach(s => {
+    if (s.z === -16) return; // El patio ya recibe sol directamente.
     [-1, 1].forEach(k => { box(4, 1.6, .25, s.x, CY + 1.3, s.z + k * 2.1, M.wall); box(.25, 1.6, 4, s.x + k * 2.1, CY + 1.3, s.z, M.wall); });
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({ color: '#f5dcb4', fog: false }));
     glow.rotation.x = Math.PI / 2; glow.position.set(s.x, CY + 2.05, s.z); glow.castShadow = false; scene.add(glow);
@@ -337,6 +348,9 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
       const sideW = HALL.x - half - .32;
       [-1, 1].forEach(side => { box(sideW, HALL.top, .36, side * (half + .32 + sideW / 2), HALL.top / 2, z, M.paleWall); box(sideW, 1.15, .46, side * (half + .32 + sideW / 2), .575, z, M.dado); });
       box(width + .64, HALL.top - height - .34, .36, 0, (HALL.top + height + .34) / 2, z, M.paleWall);
+      // Umbral ceremonial abierto: conserva la perspectiva del eje y no tiene
+      // hojas móviles que puedan barrer las piezas de la siguiente sala.
+      return;
     }
     const hinges = [];
     [-1, 1].forEach(side => {
@@ -373,7 +387,19 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
     // así las hojas nunca barren el espacio de las esculturas que quedan atrás.
     doors.push({ z, hinges, angle: 0, dir: front ? 1 : -1 });
   }
-  portal(F.wallZ, 4.6, 5.8, true); portal(-11, 6.6, 6.45); portal(-23, 6.6, 6.45);
+  portal(F.wallZ, 4.6, 5.8, true); portal(-11, 8.2, 6.45); portal(-23, 8.2, 6.45);
+
+  // Exedras rectangulares: cada dios tiene un fondo propio, separado del
+  // umbral y del recorrido. Dos columnas enmarcan la pieza sin encerrarla.
+  [-6.5, -18.5, -30.5].forEach(z => {
+    box(.14, 4.9, 3.5, -5.75, 2.45, z, M.darkStone);
+    [-1, 1].forEach(s => {
+      redColumn(-4.9, z + s * 2.2, 5.25);
+      box(.7, .12, .7, -4.9, .06, z + s * 2.2, M.marbleWarm);
+    });
+    box(.9, .24, 5.45, -5.15, 5.4, z, M.marble);
+    box(.95, .07, 5.55, -5.15, 5.56, z, M.gilt);
+  });
 
   /* ---------- Cielo crepuscular y montañas lejanas ---------- */
   const sky = new THREE.Mesh(new THREE.SphereGeometry(205, 32, 16), new THREE.ShaderMaterial({
