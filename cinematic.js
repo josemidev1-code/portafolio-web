@@ -9,11 +9,11 @@ export function createMotionRenderer(THREE, renderer, scene, camera, { compact, 
     t.depthTexture = new THREE.DepthTexture(size.x, size.y, THREE.UnsignedIntType);
     return t;
   };
-  target = makeTarget(compact ? 0 : 2);
+
   const previous = new THREE.Matrix4(), current = new THREE.Matrix4(), inverse = new THREE.Matrix4();
   let initialized = false;
   const uniforms = {
-    image: { value: target.texture }, depth: { value: target.depthTexture }, previous: { value: previous }, inverse: { value: inverse },
+    image: { value: null }, depth: { value: null }, previous: { value: previous }, inverse: { value: inverse },
     shutter: { value: .45 }, resolution: { value: size }, near: { value: camera.near }, far: { value: camera.far }, projScale: { value: 1 },
     blur: { value: reduce ? 0 : 1 }, aoStrength: { value: 1 }
   };
@@ -94,10 +94,19 @@ export function createMotionRenderer(THREE, renderer, scene, camera, { compact, 
       enabled = post;
       uniforms.blur.value = blur && !reduce ? 1 : 0;
       if (post && ao !== pairs) { pairs = ao; material.fragmentShader = shader(pairs); material.needsUpdate = true; }
-      if (post && samples !== target.samples) { target.depthTexture.dispose(); target.dispose(); target = makeTarget(samples); uniforms.image.value = target.texture; uniforms.depth.value = target.depthTexture; }
+      if (target && (!post || samples !== target.samples)) {
+        target.dispose();
+        target = null;
+        uniforms.image.value = uniforms.depth.value = null;
+      }
+      if (post && !target) {
+        target = makeTarget(samples);
+        uniforms.image.value = target.texture;
+        uniforms.depth.value = target.depthTexture;
+      }
       initialized = false;
     },
-    resize() { renderer.getDrawingBufferSize(size); target.setSize(size.x, size.y); initialized = false; },
+    resize() { renderer.getDrawingBufferSize(size); target?.setSize(size.x, size.y); initialized = false; },
     reset() { initialized = false; }
   };
 }

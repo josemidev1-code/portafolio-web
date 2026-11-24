@@ -129,12 +129,13 @@ export function createFires(THREE, scene, M, { compact, canvasTex }) {
     const layers = [];
     // Capas: cuerpo, segunda envoltura, dos lenguas laterales y núcleo.
     [[1.5, 1.85, 0, false, 0], [1.15, 1.45, .13, false, .04], [.8, 1.15, .61, false, -.24], [.7, .95, .83, false, .26], [.7, 1.0, .37, true, 0]].forEach(([w, h, s, core, ox], i) => {
+      if (compact && i > 0 && !core) return;
       const mat = flameMaterial(THREE, seed * 3.1 + s + i, { core });
       const q = new THREE.Mesh(new THREE.PlaneGeometry(w * size, h * size), mat); q.position.y = h * size / 2 - .05; q.position.x = ox * size; q.position.z = (i % 2 ? -.01 : .01) * i; q.renderOrder = 5 + i;
       fire.add(q); layers.push(mat);
     });
     const smoke = smokeMaterial(THREE, seed);
-    const smokeQuad = new THREE.Mesh(new THREE.PlaneGeometry(1.4 * size, 3 * size), smoke); smokeQuad.position.y = 1.2 * size + 1.3 * size; smokeQuad.renderOrder = 4; fire.add(smokeQuad);
+    const smokeQuad = new THREE.Mesh(new THREE.PlaneGeometry(1.4 * size, 3 * size), smoke); smokeQuad.position.y = 1.2 * size + 1.3 * size; smokeQuad.renderOrder = 4; if (!compact) fire.add(smokeQuad);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
     halo.scale.setScalar(2.2 * size); halo.position.y = .6 * size; fire.add(halo);
     const embers = emberPoints(THREE, compact ? 24 : 48, seed, 2.6 * size); embers.position.y = flameY + .15; root.add(embers);
@@ -158,6 +159,8 @@ export function createFires(THREE, scene, M, { compact, canvasTex }) {
     update(t, camera, reduce) {
       const time = reduce ? 0 : t;
       fires.forEach(f => {
+        f.root.visible = Math.abs(camera.position.z - f.root.position.z) < (compact ? 16 : 24);
+        if (!f.root.visible) return;
         // Cartel cilíndrico: las llamas miran a la cámara sin inclinarse.
         f.fire.rotation.y = Math.atan2(camera.position.x - f.root.position.x, camera.position.z - f.root.position.z);
         const k = reduce ? 1 : .78 + .16 * n1(t * 7 + f.seed * 10) + .1 * n1(t * 19 + f.seed * 3) - .05 * n1(t * 2.3 + f.seed);

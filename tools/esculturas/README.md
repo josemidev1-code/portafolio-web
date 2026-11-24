@@ -1,6 +1,6 @@
 # Esculturas modeladas: Atenea de la sabiduría y Hefesto
 
-Estos scripts generan las dos esculturas que no proceden de un escaneo. Se ejecutan con Blender usado como módulo de Python (`bpy`).
+Estos scripts generan Hefesto y la antigua estatua de cuerpo entero de Atenea. El busto de la sala I procede del GLB aportado por el autor y utiliza su propio material de caliza. Se ejecutan con Blender usado como módulo de Python (`bpy`).
 
 ## Qué hace cada archivo
 

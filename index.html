@@ -3,16 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>José Miguel Miralles Gandia · Portafolio</title>
+<title>Museo Miralles · Portafolio de José Miguel Miralles Gandia</title>
 <meta name="description" content="Portafolio de José Miguel Miralles Gandia: proyectos web y aplicaciones expuestos en un templo griego en 3D que se recorre con la rueda del ratón.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
 
 
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="museum.css">
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js"}}</script>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.min.js"}}</script>
 </head>
 <body>
 <canvas id="scene" aria-hidden="true"></canvas>
@@ -20,18 +17,19 @@
 <div class="grain" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 
-<div class="curtain" aria-hidden="true">
-  <div class="curtain-in">
-    <div class="count" id="count">00</div>
-    <div class="msg">Encendiendo las salas</div>
-  </div>
+<div class="curtain">
+  <div class="curtain-in"><strong>Museo Miralles</strong><p class="msg" role="status">Preparando el templo…</p>
+    <a class="pill" href="catalogo.html#salas">Volver al catálogo</a></div>
 </div>
 
 <header class="topbar">
   <a class="mark" href="#entrada" data-goto="0"><b>J. M. Miralles</b><span>Colección permanente · 2026</span></a>
   <nav class="top-actions" aria-label="Recorrido">
-    <button class="pill" type="button" data-goto="2">Colección</button>
-    <button class="pill" type="button" data-goto="5">Contacto</button>
+    <select class="pill" id="plano" aria-label="Ir a una parada">
+      <option value="">Plano</option><option value="0">Ágora</option><option value="1">Pórtico</option>
+      <option value="2">I · Atenea</option><option value="3">II · Hermes</option><option value="4">III · Hefesto</option><option value="5">Contacto</option>
+    </select>
+    <a class="pill" href="catalogo.html#salas">Catálogo</a>
   </nav>
 </header>
 
@@ -105,7 +103,7 @@
   </article>
 
   <section class="exit" id="contacto" aria-labelledby="t-exit">
-    <p class="kicker">Salida · Tienda del museo</p>
+    <p class="kicker">Salida · Contacto</p>
     <h2 id="t-exit">¿Hablamos<em>?</em></h2>
     <p>Busco oportunidades para aprender en equipo y aportar a proyectos reales. Si tienes una idea, una práctica o una colaboración, escríbeme.</p>
     <div class="mailbox"><a href="mailto:jmenterprice73@gmail.com" id="mail">jmenterprice73@gmail.com</a><button class="btn" type="button" id="copy">Copiar</button></div>
@@ -116,12 +114,10 @@
     </div>
   </section>
 
-  <section class="fallback" aria-label="Catálogo del museo">
-    <p class="kicker" style="font:500 11px/1 var(--mono);letter-spacing:.2em;color:var(--brass);text-transform:uppercase">Catálogo · tu navegador no muestra 3D</p>
-    <article><small>JM-001 · Sala I</small><h2>JOSEMI-OS</h2><p>Portfolio convertido en sistema operativo con terminal, ventanas, Arcade y fondos ASCII. HTML, CSS y JavaScript. <a href="https://josemidev1.site" target="_blank" rel="noopener noreferrer">Probar JOSEMI-OS ↗</a> · <a href="https://github.com/josemidev1-code/JOSEMI-OS" target="_blank" rel="noopener noreferrer">Código ↗</a></p></article>
-    <article><small>JM-002 · Sala II</small><h2>Asistente de gimnasio</h2><p>Prototipo con WhatsApp, n8n e IA. En restauración.</p></article>
-    <article><small>JM-003 · Sala III</small><h2>Próxima adquisición</h2><p>Urna reservada para el siguiente proyecto.</p></article>
-    <article><h2>Contacto</h2><p>jmenterprice73@gmail.com · <a href="https://github.com/josemidev1-code" target="_blank" rel="noopener noreferrer">GitHub ↗</a></p></article>
+  <section class="fallback" role="status">
+    <p class="kicker">Museo Miralles</p><h2>Visita en catálogo</h2>
+    <p>La vista 3D no está disponible en este navegador. Puedes recorrer las tres salas, abrir las fichas y contactar conmigo en el catálogo.</p>
+    <a class="btn" id="catalog-return" href="catalogo.html#salas">Abrir el catálogo</a>
   </section>
 </main>
 
@@ -149,16 +145,19 @@
 
 <div class="cursor" id="cursor" aria-hidden="true"><span>Ver ficha</span></div>
 
+<noscript><meta http-equiv="refresh" content="0; url=catalogo.html"><style>.curtain,.topbar{display:none}.fallback{display:block}</style></noscript>
 <script>
-window.museumFallback = function () { document.documentElement.classList.add("no-webgl", "ready"); };
-window.museumLoadTimer = setTimeout(window.museumFallback, 18000);
-// Detecta WebGL antes de cargar la escena; sin él se muestra el catálogo plano.
-(function () {
-  try { var c = document.createElement('canvas'); if (!(c.getContext('webgl2') || c.getContext('webgl'))) throw 0; }
-  catch (e) { document.documentElement.classList.add('no-webgl'); document.documentElement.classList.add('ready'); }
-})();
+window.museumFallback = function () {
+  document.documentElement.classList.add('no-webgl', 'ready');
+  const room = new URLSearchParams(location.search).get('sala');
+  const anchor = ['atenea','hermes','hefesto'].includes(room) ? '#sala-' + room : '#entrada';
+  location.replace(new URL('catalogo.html' + anchor, location.href));
+
+};
 </script>
-
-<script type="module" src="museum.js" onerror="window.museumFallback()"></script>
-
+<script type="module">
+  if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('importmap')) window.museumFallback();
+  else import('./museum.js').catch(error => { console.error(error); window.museumFallback(); });
+</script>
+<script nomodule>window.museumFallback();</script>
 </body></html>

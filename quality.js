@@ -6,7 +6,7 @@ export const LEVELS = ['baja', 'media', 'alta'];
 export const PRESETS = {
   alta:  { pixelCap: 1.75, scale: 1,  post: true,  ao: 6, blur: true,  samples: 2, sunMap: 2048, heroShadow: true,  extraLights: true,  shadowEvery: 1, dust: true, reflect: true },
   media: { pixelCap: 1.25, scale: 1,  post: true,  ao: 4, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: true,  shadowEvery: 1, dust: true, reflect: false },
-  baja:  { pixelCap: 1,    scale: .85, post: false, ao: 0, blur: false, samples: 0, sunMap: 1024, heroShadow: false, extraLights: false, shadowEvery: 6, dust: false, reflect: false }
+  baja:  { pixelCap: 1,    scale: .80, post: false, ao: 0, blur: false, samples: 0, sunMap: 512, heroShadow: false, extraLights: false, shadowEvery: 6, dust: false, reflect: false }
 };
 
 const KEY = 'museo-calidad', AUTO_KEY = 'museo-calidad-auto';
@@ -15,22 +15,11 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento: solo dura la visita */ } }
 };
 
-/** Lee el nombre de la gráfica con un contexto WebGL de prueba que se libera enseguida. */
-function gpuName() {
-  try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl');
-    if (!gl) return '';
-    const ext = gl.getExtension('WEBGL_debug_renderer_info');
-    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    gl.getExtension('WEBGL_lose_context')?.loseContext();
-    return name;
-  } catch { return ''; }
-}
-
-/** Primera estimación a partir de la gráfica, los núcleos y la memoria del equipo. */
-export function detectLevel({ mobile }) {
-  const gpu = gpuName(), g = gpu.toLowerCase();
+/** Usa el mismo contexto que dibujará el museo. */
+export function detectLevel({ mobile, gl }) {
+  const ext = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  const g = gpu.toLowerCase();
   const cores = navigator.hardwareConcurrency || 4, memory = navigator.deviceMemory || 8;
   let level = 'media';
   if (/swiftshader|llvmpipe|softpipe|basic render|software/.test(g)) level = 'baja';
@@ -48,9 +37,9 @@ const lower = (a, b) => LEVELS[Math.min(LEVELS.indexOf(a), LEVELS.indexOf(b))];
 
 /** Nivel con el que arranca la visita: la elección del visitante, o la detección corregida
  *  por lo que se midió en visitas anteriores. */
-export function initialQuality({ mobile }) {
+export function initialQuality({ mobile, gl }) {
   const choice = store.get(KEY);
-  const detected = detectLevel({ mobile });
+  const detected = detectLevel({ mobile, gl });
   const measured = store.get(AUTO_KEY);
   const auto = LEVELS.includes(measured) ? lower(detected.level, measured) : detected.level;
   const manual = LEVELS.includes(choice) ? choice : null;
@@ -62,7 +51,7 @@ export function initialQuality({ mobile }) {
 export function createGovernor({ getLevel, setLevel, setScale, isAuto, isBusy }) {
   let frames = 0, since = 0, waitUntil = 0, scale = 1, armed = false;
   return {
-    start(now) { armed = true; since = now; frames = 0; waitUntil = now + 1500; },
+    start(now) { armed = true; scale = 1; since = now; frames = 0; waitUntil = now + 1500; },
     reset(now) { since = now; frames = 0; waitUntil = now + 1000; },
     tick(now) {
       if (!armed || !isAuto()) return;

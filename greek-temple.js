@@ -1,8 +1,8 @@
 /** Arquitectura del museo: pórtico dórico hexástilo, sala columnada con entablamento,
  *  techo de casetones pintados, lucernarios con haces de luz y puertas de bronce. */
-import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from './vendor/three/examples/jsm/utils/BufferGeometryUtils.js';
 import { smootherStep } from './motion.js';
-import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/objects/Reflector.js';
+import { Reflector } from './vendor/three/examples/jsm/objects/Reflector.js';
 import { worldUV } from './materials.js';
 import { muralTexture } from './murals.js';
 
@@ -25,7 +25,7 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
     geo.translate(0, 0, -d / 2 + b); boxCache.set(key, geo); return geo;
   }
   function box(w, h, d, x, y, z, mat = M.marble, parent = statics) {
-    const small = Math.min(w, h, d) < .1;
+    const small = compact || Math.min(w, h, d) < .1;
     const m = new THREE.Mesh(small ? plain : chamferBox(w, h, d), mat);
     if (small) m.scale.set(w, h, d);
     m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; parent.add(m); return m;
@@ -62,6 +62,10 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   [-4.7, -2.4, 2.4, 4.7].forEach(x => box(Math.abs(x) > 3 ? .09 : .06, .012, 49.4, x, .002, -21, M.gilt));
   for (let z = -3; z > -45; z -= 6) box(9.4, .012, .09, 0, .002, z, M.gilt);
 
+  // Una vía procesional de piedra roja deja legible el eje entre las vitrinas laterales.
+  box(1.08, .008, 39.5, 0, .009, -16.2, M.redMarble);
+  for (const x of [-.57, .57]) box(.035, .009, 39.5, x, .009, -16.2, M.darkGilt);
+
   /* ---------- Muros de sillería con zócalo de ortostatos ---------- */
   const wallLen = HALL.start - HALL.end, wallZ = (HALL.start + HALL.end) / 2;
   [-1, 1].forEach(s => {
@@ -95,8 +99,8 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
 
   /* ---------- Columnas dóricas: 20 estrías de arista viva, éntasis y capitel ---------- */
   function shaftGeometry(height, r0, r1) {
-    const flutes = 20, perFlute = compact ? 4 : 8;
-    const geo = new THREE.CylinderGeometry(r1, r0, height, flutes * perFlute, compact ? 6 : 10, false);
+    const flutes = 20, perFlute = compact ? 3 : 6;
+    const geo = new THREE.CylinderGeometry(r1, r0, height, flutes * perFlute, compact ? 4 : 8, false);
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const x = p.getX(i), z = p.getZ(i), y = p.getY(i) / height + .5, r = Math.hypot(x, z);
@@ -350,9 +354,9 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
         box(pw + .1, ph + .1, .05, center, y, .12, M.gilt, pivot);
         box(pw - .04, ph - .04, .07, center, y, .14, leafMat, pivot);
         // Clavos de bronce en retícula y roseta central.
-        for (let i = -1; i <= 1; i++) for (let j = -2; j <= 2; j++) if (i || j) { const n = new THREE.Mesh(new THREE.SphereGeometry(.028, 8, 6), M.gilt); n.position.set(center + i * pw * .32, y + j * ph * .2, .19); pivot.add(n); }
+        for (let i = -1; i <= 1; i++) for (let j = -2; j <= 2; j++) if ((i || j) && (!compact || (i && Math.abs(j) === 2))) { const n = new THREE.Mesh(new THREE.SphereGeometry(.028, 8, 6), M.gilt); n.position.set(center + i * pw * .32, y + j * ph * .2, .19); pivot.add(n); }
         const ros = new THREE.Mesh(new THREE.TorusGeometry(.13, .025, 8, 32), M.gilt); ros.position.set(center, y, .19); pivot.add(ros);
-        for (let p = 0; p < 8; p++) { const a = p * Math.PI / 4, leaf = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), M.gilt); leaf.scale.set(.6, 1.7, .5); leaf.position.set(center + Math.sin(a) * .075, y + Math.cos(a) * .075, .2); leaf.rotation.z = -a; pivot.add(leaf); }
+        for (let p = 0; !compact && p < 8; p++) { const a = p * Math.PI / 4, leaf = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), M.gilt); leaf.scale.set(.6, 1.7, .5); leaf.position.set(center + Math.sin(a) * .075, y + Math.cos(a) * .075, .2); leaf.rotation.z = -a; pivot.add(leaf); }
       });
       const hx = -side * (half - .22);
       box(.13, .36, .05, hx, height * .49, .13, M.gilt, pivot);
@@ -410,14 +414,22 @@ export function createGreekMuseum(THREE, scene, canvasTex, compact, M) {
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 58, bottom: -58, near: 1, far: 140 });
   sun.shadow.normalBias = .03; sun.shadow.bias = -.0004; sun.shadow.radius = 3;
   // Luz de cielo fría para que la sombra nunca sea negra; tono de piedra en el rebote.
-  scene.add(new THREE.HemisphereLight('#a9bccd', '#5a4636', .32));
+  scene.add(new THREE.HemisphereLight('#dddcd7', '#a69280', compact ? 1.05 : .68));
   const bounce = new THREE.DirectionalLight('#b88a62', .22); bounce.position.set(4, -2, -20); bounce.userData.extra = true; scene.add(bounce);
 
   /* ---------- Agrupación de la arquitectura estática por material ---------- */
   statics.updateMatrixWorld(true);
   const batches = new Map();
-  statics.traverse(mesh => { if (!mesh.isMesh) return; if (!batches.has(mesh.material)) batches.set(mesh.material, []); batches.get(mesh.material).push(mesh); });
-  batches.forEach((meshes, material) => {
+  const center = new THREE.Vector3();
+  statics.traverse(mesh => {
+    if (!mesh.isMesh) return;
+    const zone = Math.floor((mesh.getWorldPosition(center).z + 11) / 12);
+    const key = zone + '/' + mesh.material.uuid;
+    if (!batches.has(key)) batches.set(key, []);
+    batches.get(key).push(mesh);
+  });
+  batches.forEach(meshes => {
+    const material = meshes[0].material;
     const scale = uvScale.get(material) || [.5, .5];
     const geos = meshes.map(m => { const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrixWorld); if (!m.userData.keepUV) worldUV(g, scale); return g; });
     const geo = mergeGeometries(geos, false); geos.forEach(g => g.dispose()); if (!geo) return;

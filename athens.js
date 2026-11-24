@@ -1,7 +1,7 @@
 /** Exterior: ágora ante el Partenón con el muro grabado del autor, y Atenas sobre las colinas al atardecer.
  *  La ciudad se dibuja con instancias (casas, tejados, cipreses y luces) para que cueste pocas llamadas de dibujo. */
 import { fbmField, rng, worldUV } from './materials.js';
-import { mergeGeometries } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from './vendor/three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export const WALL = { x: 8.2, z: 29.5, rot: -.95, w: 7.2, h: 4.2 };
 const PLAZA_Y = -.6;
@@ -25,7 +25,7 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   const rInner = a => 1 / Math.pow(Math.pow(Math.abs(Math.cos(a)) / AX, 4) + Math.pow(Math.abs(Math.sin(a)) / AZ, 4), .25);
 
   /* ---------- Terreno: colinas alrededor de la Acrópolis ---------- */
-  const segR = compact ? 40 : 70, segA = compact ? 120 : 200, SPAN = 165;
+  const segR = compact ? 24 : 60, segA = compact ? 80 : 160, SPAN = 165;
   const H = fbmField(256, { period: 4, octaves: 5, seed: 77 });
   // Fuera de la meseta el terreno cae hacia la ciudad y sube en colinas lejanas (Licabeto, Himeto).
   const height = (x, z) => {
@@ -60,7 +60,7 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
 
   /* ---------- Casas, tejados, cipreses y luces de la ciudad ---------- */
   const houses = [], spots = [];
-  const N = compact ? 650 : 1500;
+  const N = compact ? 330 : 1100;
   for (let k = 0; k < N * 3 && houses.length < N; k++) {
     const a = random() * Math.PI * 2, r = rInner(a) + 7 + Math.pow(random(), .8) * 125;
     const x = Math.cos(a) * r, z = Math.sin(a) * r + CZ;
@@ -91,7 +91,7 @@ export function createAthens(THREE, scene, M, { compact, canvasTex, contactShado
   });
   walls.receiveShadow = roofs.receiveShadow = true; group.add(walls, roofs);
   // Cipreses y olivos.
-  const cyp = new THREE.InstancedMesh(new THREE.ConeGeometry(.9, 7, 7).translate(0, 3.5, 0), new THREE.MeshStandardMaterial({ color: '#2c3a26', roughness: 1 }), compact ? 220 : 520);
+  const cyp = new THREE.InstancedMesh(new THREE.ConeGeometry(.9, 7, 7).translate(0, 3.5, 0), new THREE.MeshStandardMaterial({ color: '#2c3a26', roughness: 1 }), compact ? 140 : 400);
   for (let i = 0; i < cyp.count; i++) {
     const a = random() * Math.PI * 2, r = rInner(a) + 4 + random() * 115, x = Math.cos(a) * r, z = Math.sin(a) * r + CZ;
     const s = .6 + random() * .8; m4.compose(new THREE.Vector3(x, height(x, z) - .3, z), q.identity(), new THREE.Vector3(s, s * (.8 + random() * .6), s)); cyp.setMatrixAt(i, m4);
