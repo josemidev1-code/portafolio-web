@@ -31,10 +31,10 @@ let small = innerWidth < 720;
 const canvas = document.getElementById('scene');
 const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, powerPreference: 'default' });
 if (!gl) throw new Error('WebGL 2 no disponible');
-const detectedQuality = initialQuality({ mobile: small || !finePointer, gl });
+const detectedQuality = initialQuality();
 let qualityMode = detectedQuality.mode, quality = detectedQuality.level, renderScale = 1;
 // En equipos modestos la geometría, las texturas y las esculturas se cargan en su versión ligera.
-const compact = small || quality === 'baja';
+const compact = small || qualityMode === 'auto' || quality === 'baja';
 const pixelRatio = () => { const P = PRESETS[quality]; return Math.min(Math.sqrt((quality === 'baja' ? 850000 : quality === 'media' ? 2100000 : 3800000) / (innerWidth * innerHeight)), devicePixelRatio, small ? Math.min(1.35, P.pixelCap) : P.pixelCap) * P.scale * renderScale; };
 
 /* ---------- Fichas (contenido real) ---------- */
@@ -193,11 +193,16 @@ function canvasTex(w, h, draw, opts = {}) {
   t.userData = { canvas: c, ctx: g };
   return t;
 }
+// Cede el hilo entre las fases de construcción para permitir pintar y usar el enlace ligero.
+const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0));
+await yieldToBrowser();
 const M = createMaterials(THREE, { compact });
 const architecture = createGreekMuseum(THREE, scene, canvasTex, compact, M);
+await yieldToBrowser();
 const mythology = addMythology(THREE, scene, canvasTex, compact, M);
 const exterior = new THREE.Group(); scene.add(exterior);
 const athens = createAthens(THREE, exterior, M, { compact, canvasTex, contactShadow: architecture.contactShadow });
+await yieldToBrowser();
 const fires = createFires(THREE, scene, M, { compact, canvasTex });
 const pottery = createPottery(THREE, scene, M, { compact, contactShadow: architecture.contactShadow });
 const gods = createGods(THREE, scene, M, { compact, renderer, contactShadow: architecture.contactShadow });
@@ -439,6 +444,7 @@ const governor = createGovernor({
   setLevel: level => { quality = level; applyQuality(); },
   setScale: s => { renderScale = s; applyQuality(); },
   isAuto: () => qualityMode === 'auto',
+  onStall: window.museumFallback,
   isBusy: () => dlg.open || document.hidden
 });
 // Auto → Alta → Media → Baja → Auto
@@ -446,8 +452,9 @@ qualityButton.addEventListener('click', () => {
   const order = ['auto', 'alta', 'media', 'baja'];
   const next = order[(order.indexOf(qualityMode === 'auto' ? 'auto' : quality) + 1) % order.length];
   qualityMode = next === 'auto' ? 'auto' : 'manual';
-  quality = next === 'auto' ? detectedQuality.detected : next;
+  quality = next === 'auto' ? 'baja' : next;
   renderScale = 1; saveChoice(next); applyQuality();
+  schedule();
   if (qualityMode === 'auto') governor.start(performance.now());
 });
 applyQuality();
@@ -478,7 +485,7 @@ document.querySelectorAll('[data-goto]').forEach(el => el.addEventListener('clic
 const dlg = document.getElementById('ficha');
 const freeCamera=createFreeCamera(THREE,camera,canvas,{
   button:document.getElementById('free-toggle'),hud:document.getElementById('free-hud'),dialog:dlg,
-  onReset:()=>cinematic.reset(),
+  onReset:()=>{ cinematic.reset(); schedule(); },
   onExit:()=>{let best=0,distance=Infinity;for(let n=0;n<=200;n++){const u=n/200*total,d=sample(u).pos.distanceTo(camera.position);if(d<distance){distance=d;best=u;}}
     scrollU=smoothU=best;travelVelocity=0;window.scrollTo({top:best*unitPx(),behavior:'instant'});}
 });
@@ -560,6 +567,11 @@ function updateUI(s) {
   // índice de parada real más cercana para la interfaz
   const mainAt = MAIN.reduce((best, i) => Math.abs(stopU(i) - smoothU) < Math.abs(stopU(best) - smoothU) ? i : best, MAIN[0]);
   currentMain = MAIN.indexOf(mainAt);
+  if (mainAt !== lastAt) {
+    const sala = SALAS[currentMain - 2]?.id || 'portico';
+    document.body.dataset.sala = sala;
+    for (const link of document.querySelectorAll('[data-light-tour]')) link.href = 'recorrido.html#' + sala;
+  }
   const inHold = segs.some(g => g.type === 'hold' && g.i === mainAt && smoothU >= g.a - .25 && smoothU <= g.b + .25);
   Object.entries(cards).forEach(([i, el]) => {
     const visible = inHold && +i === mainAt;
@@ -608,16 +620,29 @@ function schedule() {
   if (!frameId && !document.hidden && !contextLost && !dlg.open) frameId = requestAnimationFrame(loop);
 }
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); contextLost = true; cancelAnimationFrame(frameId); frameId = 0; window.museumFallback(); });
-canvas.addEventListener('webglcontextrestored', () => location.reload());
+
 function resume() { clock.getDelta(); cinematic.reset(); governor.reset(performance.now()); schedule(); }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { cancelAnimationFrame(frameId); frameId = 0; } else resume();
 });
 dlg.addEventListener('close', resume);
-function loop() {
+let lastDraw = 0;
+if (reduce) {
+  for (const event of ['scroll', 'resize', 'pointermove', 'change']) addEventListener(event, schedule, { passive: true });
+  THREE.DefaultLoadingManager.onProgress = schedule;
+}
+function loop(now = performance.now()) {
   frameId = 0;
   if (document.hidden || contextLost || dlg.open) return;
-  schedule();
+  if (!reduce || freeCamera.active) {
+    schedule();
+    // Limita el trabajo continuo del perfil ligero en pantallas de 60 a 144 Hz.
+    if (quality === 'baja') {
+      const interval = 1000 / 30, elapsed = now - lastDraw;
+      if (lastDraw && elapsed < interval - .5) return;
+      lastDraw = now - (elapsed >= interval ? elapsed % interval : 0);
+    }
+  }
   const dt = Math.min(clock.getDelta(), .1), t = clock.elapsedTime;
   if(reduce){smoothU=scrollU;travelVelocity=0;}
   else {
@@ -669,6 +694,7 @@ function loop() {
     if (hovered) cursorLabel.textContent = hovered.about ? 'Sobre mí' : hovered.god ? `Conocer a ${GOD_INFO[hovered.god].title}` : 'Ver ficha';
     cursor.classList.toggle('view', !!hovered);
   } else hovered = null;
+  if (reduce) { cx = tx; cy = ty; }
   cx += (tx - cx) * (1 - Math.pow(.0001, dt)); cy += (ty - cy) * (1 - Math.pow(.0001, dt));
   cursor.style.transform = `translate3d(${cx}px,${cy}px,0)`;
 
@@ -682,7 +708,8 @@ function loop() {
   lastUIPosition = smoothU;
   mythology.update(t,reduce);
   cinematic.render(dt);
-  governor.tick(performance.now()); frameNo++;
+  if (!reduce || freeCamera.active) governor.tick(performance.now());
+  frameNo++;
   fpsFrames++;
   if(t-fpsStart>=1){canvas.dataset.frameRate=String(Math.round(fpsFrames/(t-fpsStart)));fpsFrames=0;fpsStart=t;}
 }
@@ -710,5 +737,6 @@ if (roomIndex >= 0) {
   camLook.copy(sample(smoothU).look);
 }
 loop();
+clearTimeout(window.museumStartupTimer);
 root.classList.add('ready');
 governor.start(performance.now());

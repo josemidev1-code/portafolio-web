@@ -19,7 +19,7 @@
 
 <div class="curtain">
   <div class="curtain-in"><strong>Museo Miralles</strong><p class="msg" role="status">Preparando el templo…</p>
-    <a class="pill" href="catalogo.html#salas">Volver al catálogo</a></div>
+    <a class="pill" data-light-tour href="recorrido.html">Ver el museo en modo ligero</a></div>
 </div>
 
 <header class="topbar">
@@ -29,7 +29,7 @@
       <option value="">Plano</option><option value="0">Ágora</option><option value="1">Pórtico</option>
       <option value="2">I · Atenea</option><option value="3">II · Hermes</option><option value="4">III · Hefesto</option><option value="5">Contacto</option>
     </select>
-    <a class="pill" href="catalogo.html#salas">Catálogo</a>
+    <a class="pill" data-light-tour href="recorrido.html">Visita ligera</a>
   </nav>
 </header>
 
@@ -145,15 +145,17 @@
 
 <div class="cursor" id="cursor" aria-hidden="true"><span>Ver ficha</span></div>
 
-<noscript><meta http-equiv="refresh" content="0; url=catalogo.html"><style>.curtain,.topbar{display:none}.fallback{display:block}</style></noscript>
+<noscript><meta http-equiv="refresh" content="0; url=recorrido.html"><style>.curtain,.topbar{display:none}.fallback{display:block}</style></noscript>
 <script>
+const salaInicial = new URLSearchParams(location.search).get('sala');
+function visitaLigera(sala) {
+  return 'recorrido.html#' + (['atenea','hermes','hefesto'].includes(sala) ? sala : 'portico');
+}
+for (const link of document.querySelectorAll('[data-light-tour]')) link.href = visitaLigera(salaInicial);
 window.museumFallback = function () {
-  document.documentElement.classList.add('no-webgl', 'ready');
-  const room = new URLSearchParams(location.search).get('sala');
-  const anchor = ['atenea','hermes','hefesto'].includes(room) ? '#sala-' + room : '#entrada';
-  location.replace(new URL('catalogo.html' + anchor, location.href));
-
+  location.replace(visitaLigera(document.body.dataset.sala || salaInicial));
 };
+window.museumStartupTimer = setTimeout(window.museumFallback, 18000);
 </script>
 <script type="module">
   if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('importmap')) window.museumFallback();

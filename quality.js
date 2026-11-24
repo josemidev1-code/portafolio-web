@@ -9,46 +9,23 @@ export const PRESETS = {
   baja:  { pixelCap: 1,    scale: .80, post: false, ao: 0, blur: false, samples: 0, sunMap: 512, heroShadow: false, extraLights: false, shadowEvery: 6, dust: false, reflect: false }
 };
 
-const KEY = 'museo-calidad', AUTO_KEY = 'museo-calidad-auto';
+const KEY = 'museo-calidad';
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento: solo dura la visita */ } }
 };
 
-/** Usa el mismo contexto que dibujará el museo. */
-export function detectLevel({ mobile, gl }) {
-  const ext = gl.getExtension('WEBGL_debug_renderer_info');
-  const gpu = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
-  const g = gpu.toLowerCase();
-  const cores = navigator.hardwareConcurrency || 4, memory = navigator.deviceMemory || 8;
-  let level = 'media';
-  if (/swiftshader|llvmpipe|softpipe|basic render|software/.test(g)) level = 'baja';
-  // Gráficas integradas de Intel anteriores a Iris Xe: las de la mayoría de aulas y portátiles básicos.
-  else if (/intel/.test(g) && !/iris|arc/.test(g)) level = 'baja';
-  else if (/mali-[2-4]|mali-t|adreno.*\b[2-5]\d\d\b|powervr|videocore/.test(g)) level = 'baja';
-  else if (/nvidia|geforce|quadro|rtx|radeon (rx|pro)|\brx \d|apple m\d|apple gpu/.test(g) && !mobile) level = 'alta';
-  if (cores <= 2 || memory <= 2) level = 'baja';
-  else if ((cores <= 4 || memory <= 4) && level === 'alta') level = 'media';
-  if (mobile && level === 'alta') level = 'media';
-  return { level, gpu };
-}
-
-const lower = (a, b) => LEVELS[Math.min(LEVELS.indexOf(a), LEVELS.indexOf(b))];
-
-/** Nivel con el que arranca la visita: la elección del visitante, o la detección corregida
- *  por lo que se midió en visitas anteriores. */
-export function initialQuality({ mobile, gl }) {
+// La primera compilación usa el perfil ligero incluso si el navegador anuncia una GPU rápida.
+export function initialQuality() {
   const choice = store.get(KEY);
-  const detected = detectLevel({ mobile, gl });
-  const measured = store.get(AUTO_KEY);
-  const auto = LEVELS.includes(measured) ? lower(detected.level, measured) : detected.level;
-  const manual = LEVELS.includes(choice) ? choice : null;
-  return { mode: manual ? 'manual' : 'auto', level: manual || auto, detected: detected.level, gpu: detected.gpu };
+  return LEVELS.includes(choice)
+    ? { mode: 'manual', level: choice }
+    : { mode: 'auto', level: 'baja' };
 }
 
 /** Vigila el rendimiento real: si durante unos segundos no se alcanzan ~30 fps,
  *  baja un nivel (y después la resolución) y lo recuerda para la próxima visita. */
-export function createGovernor({ getLevel, setLevel, setScale, isAuto, isBusy }) {
+export function createGovernor({ getLevel, setLevel, setScale, isAuto, isBusy, onStall }) {
   let frames = 0, since = 0, waitUntil = 0, scale = 1, armed = false;
   return {
     start(now) { armed = true; scale = 1; since = now; frames = 0; waitUntil = now + 1500; },
@@ -63,12 +40,15 @@ export function createGovernor({ getLevel, setLevel, setScale, isAuto, isBusy })
       since = now; frames = 0;
       if (fps >= 28) return;
       const level = getLevel(), i = LEVELS.indexOf(level);
-      if (i > 0) { setLevel(LEVELS[i - 1]); store.set(AUTO_KEY, LEVELS[i - 1]); }
+      if (i > 0) { setLevel(LEVELS[i - 1]); }
       else if (scale > .6) { scale = Math.max(.6, scale - .15); setScale(scale); }
-      else armed = false;
+      else if (fps < 8) {
+        armed = false;
+        onStall();
+      }
       waitUntil = now + 2000;
     }
   };
 }
 
-export function saveChoice(mode) { if (mode === 'auto') { try { localStorage.removeItem(KEY); localStorage.removeItem(AUTO_KEY); } catch { /* */ } } else store.set(KEY, mode); }
+export function saveChoice(mode) { if (mode === 'auto') { try { localStorage.removeItem(KEY); } catch { /* */ } } else store.set(KEY, mode); }
